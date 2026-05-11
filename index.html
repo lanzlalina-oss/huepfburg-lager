@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0f0f0f">
+<title>Hüpfburg Lager</title>
+<style>
+:root {
+  --pink: #e85d8a;
+  --pink-dark: #c44d76;
+  --green: #3adb7a;
+  --green-dark: #1a5a35;
+  --green-bg: #0f2a1a;
+  --amber: #f5a623;
+  --amber-bg: #2a1f00;
+  --red: #ff6b6b;
+  --red-bg: #2a0a0a;
+  --blue: #4a9eff;
+  --blue-bg: #1a2a3d;
+  --bg0: #0f0f0f;
+  --bg1: #161616;
+  --bg2: #1e1e1e;
+  --bg3: #272727;
+  --bg4: #333;
+  --t1: #ffffff;
+  --t2: #cccccc;
+  --t3: #888888;
+  --t4: #555555;
+  --border: #2a2a2a;
+  --radius: 12px;
+  --radius-sm: 8px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; overflow: hidden; background: var(--bg0); font-family: -apple-system, 'SF Pro Display', 'Helvetica Neue', sans-serif; color: var(--t1); }
+#app { height: 100dvh; display: flex; flex-direction: column; max-width: 430px; margin: 0 auto; position: relative; overflow: hidden; }
+
+/* SCREENS */
+.screen { position: absolute; inset: 0; background: var(--bg0); display: flex; flex-direction: column; transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.4,0,0.2,1); z-index: 1; }
+.screen.active { transform: translateX(0); z-index: 2; }
+.screen.prev { transform: translateX(-30%); }
+
+/* STATUS BAR */
+.status-bar { background: var(--bg1); padding: 12px 16px 8px; display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; flex-shrink: 0; }
+.status-bar .right { display: flex; gap: 6px; align-items: center; }
+
+/* TOP BAR */
+.top-bar { background: var(--bg1); padding: 10px 16px 12px; display: flex; align-items: center; gap: 10px; border-bottom: 0.5px solid var(--border); flex-shrink: 0; }
+.top-bar h1 { font-size: 17px; font-weight: 600; flex: 1; }
+.back-btn { color: var(--pink); font-size: 24px; cursor: pointer; display: flex; align-items: center; line-height: 1; }
+.app-icon { width: 30px; height: 30px; border-radius: 8px; background: var(--pink); display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+
+/* SCROLL CONTENT */
+.scroll-content { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: 90px; }
+.scroll-content::-webkit-scrollbar { display: none; }
+
+/* SEARCH */
+.search-wrap { padding: 10px 14px; background: var(--bg1); border-bottom: 0.5px solid var(--border); }
+.search-inner { position: relative; }
+.search-inner svg { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--t3); width: 16px; height: 16px; }
+.search-input { width: 100%; background: var(--bg3); border: 0.5px solid var(--bg4); border-radius: 10px; padding: 9px 12px 9px 36px; color: var(--t1); font-size: 14px; outline: none; }
+.search-input::placeholder { color: var(--t4); }
+.search-input:focus { border-color: var(--pink); }
+
+/* STATS */
+.stats-row { display: flex; gap: 10px; padding: 12px 14px 8px; }
+.stat-card { flex: 1; border-radius: var(--radius); padding: 12px; border: 0.5px solid var(--border); cursor: pointer; transition: opacity 0.15s; }
+.stat-card:active { opacity: 0.7; }
+.stat-card.neutral { background: var(--bg2); }
+.stat-card.good { background: var(--green-bg); border-color: #1a4a2a; }
+.stat-card.warn { background: var(--red-bg); border-color: #4a1a1a; }
+.stat-n { font-size: 24px; font-weight: 700; }
+.stat-card.neutral .stat-n { color: var(--t1); }
+.stat-card.good .stat-n { color: var(--green); }
+.stat-card.warn .stat-n { color: var(--red); }
+.stat-l { font-size: 11px; margin-top: 2px; }
+.stat-card.neutral .stat-l { color: var(--t3); }
+.stat-card.good .stat-l { color: #2a8a4a; }
+.stat-card.warn .stat-l { color: #cc4444; }
+
+/* LIST ITEMS */
+.section-hdr { padding: 12px 14px 5px; color: var(--t3); font-size: 11px; text-transform: uppercase; letter-spacing: 0.6px; font-weight: 600; }
+.list-item { background: var(--bg1); border-bottom: 0.5px solid var(--border); padding: 10px 14px; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: background 0.1s; }
+.list-item:active { background: var(--bg2); }
+.item-thumb { width: 46px; height: 46px; border-radius: 10px; background: var(--bg3); display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; font-size: 20px; }
+.item-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.item-thumb.oldest-border { outline: 2.5px solid var(--amber); outline-offset: 1px; }
+.item-info { flex: 1; min-width: 0; }
+.item-name { color: var(--t1); font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.item-serial { color: var(--t3); font-size: 12px; margin-top: 1px; font-variant-numeric: tabular-nums; }
+.oldest-badge { background: var(--amber-bg); color: var(--amber); font-size: 10px; border-radius: 4px; padding: 2px 5px; margin-top: 2px; display: inline-block; font-weight: 600; }
+.item-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
+.platz-badge { background: var(--bg3); border-radius: 6px; padding: 3px 8px; font-size: 12px; color: var(--t2); white-space: nowrap; }
+.pal-badge { color: var(--amber); font-size: 10px; font-weight: 600; }
+
+/* FAB ROW */
+.fab-row { padding: 10px 14px; display: flex; gap: 10px; background: var(--bg0); border-top: 0.5px solid var(--border); flex-shrink: 0; }
+.fab { flex: 1; border: none; border-radius: var(--radius); padding: 13px 10px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: opacity 0.15s, transform 0.1s; }
+.fab:active { opacity: 0.8; transform: scale(0.98); }
+.fab-primary { background: var(--pink); color: #fff; }
+.fab-secondary { background: var(--bg3); color: var(--t1); border: 0.5px solid var(--bg4); }
+
+/* BOTTOM NAV */
+.bottom-nav { background: var(--bg1); border-top: 0.5px solid var(--border); display: flex; flex-shrink: 0; padding-bottom: env(safe-area-inset-bottom); }
+.nav-btn { flex: 1; padding: 10px 4px 8px; display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; border: none; background: transparent; color: var(--t3); font-size: 10px; font-weight: 500; transition: color 0.15s; }
+.nav-btn.active { color: var(--pink); }
+.nav-btn svg { width: 22px; height: 22px; }
+
+/* FORMS */
+.form-section { padding: 14px; }
+.form-group { margin-bottom: 14px; }
+.form-label { color: var(--t2); font-size: 13px; margin-bottom: 6px; display: flex; align-items: center; gap: 4px; font-weight: 500; }
+.req { color: var(--pink); }
+.input-wrap { position: relative; }
+.input-wrap svg { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--t4); width: 18px; height: 18px; pointer-events: none; }
+.form-input { width: 100%; background: var(--bg2); border: 0.5px solid var(--bg4); border-radius: 10px; padding: 12px 42px 12px 14px; color: var(--t1); font-size: 15px; outline: none; transition: border-color 0.15s; }
+.form-input::placeholder { color: var(--t4); }
+.form-input:focus { border-color: var(--pink); }
+.form-input.error { border-color: var(--red); }
+.form-divider { height: 0.5px; background: var(--border); margin: 6px 0 14px; }
+.hint-box { background: var(--blue-bg); border: 0.5px solid #2a4a6a; border-radius: 10px; padding: 10px 12px; margin: 0 0 14px; display: flex; align-items: center; gap: 8px; color: var(--blue); font-size: 13px; }
+.hint-warn { background: var(--amber-bg); border: 0.5px solid #554000; border-radius: 10px; padding: 10px 12px; margin: 6px 14px; display: flex; align-items: center; gap: 8px; color: var(--amber); font-size: 13px; }
+.btn-row { display: flex; gap: 10px; }
+.action-btn { border-radius: var(--radius); padding: 13px 16px; font-size: 15px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; border: none; transition: opacity 0.15s, transform 0.1s; width: 100%; }
+.action-btn:active { opacity: 0.8; transform: scale(0.98); }
+.btn-cancel { background: var(--bg3); color: var(--t2); border: 0.5px solid var(--bg4); flex: 1; justify-content: center; }
+.btn-save { background: var(--green-bg); color: var(--green); border: 0.5px solid #1a4a2a; flex: 1; justify-content: center; }
+.btn-sell { background: var(--green-bg); color: var(--green); border: 0.5px solid #1a4a2a; width: calc(100% - 28px); margin: 4px 14px; }
+.btn-move { background: var(--amber-bg); color: var(--amber); border: 0.5px solid #3d2a00; width: calc(100% - 28px); margin: 4px 14px; }
+
+/* DETAIL CARD */
+.detail-hero { padding: 14px; display: flex; align-items: center; gap: 12px; }
+.detail-thumb { width: 68px; height: 68px; border-radius: 14px; background: var(--bg3); overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 28px; flex-shrink: 0; }
+.detail-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.detail-name { color: var(--t1); font-size: 20px; font-weight: 700; }
+.detail-art { color: var(--t3); font-size: 13px; margin-top: 3px; }
+.in-stock-badge { background: #1a4a2a; color: var(--green); font-size: 11px; font-weight: 600; border-radius: 6px; padding: 3px 8px; margin-left: auto; align-self: flex-start; }
+.loc-section { padding: 0 14px 10px; }
+.loc-label { color: var(--t3); font-size: 12px; margin-bottom: 6px; }
+.loc-value { background: var(--blue-bg); border-radius: 8px; padding: 8px 14px; color: var(--blue); font-size: 17px; font-weight: 700; display: inline-block; }
+.info-card { background: var(--bg2); border-radius: var(--radius); margin: 6px 14px; border: 0.5px solid var(--border); overflow: hidden; }
+.info-row { padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; border-bottom: 0.5px solid var(--border); }
+.info-row:last-child { border-bottom: none; }
+.info-key { color: var(--t3); font-size: 13px; }
+.info-val { color: var(--t1); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* MODAL */
+.modal-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.8); display: flex; align-items: flex-end; z-index: 50; border-radius: inherit; }
+.modal-sheet { background: var(--bg2); border-radius: 18px 18px 0 0; width: 100%; padding: 16px; }
+.modal-handle { width: 40px; height: 4px; background: var(--bg4); border-radius: 2px; margin: 0 auto 16px; }
+.modal-title { color: var(--t1); font-size: 17px; font-weight: 700; margin-bottom: 12px; }
+.modal-input { width: 100%; background: var(--bg3); border: 0.5px solid var(--bg4); border-radius: 10px; padding: 12px 14px; color: var(--t1); font-size: 15px; margin-bottom: 10px; outline: none; }
+.modal-input:focus { border-color: var(--pink); }
+.modal-btns { display: flex; gap: 10px; }
+.modal-btn { flex: 1; padding: 13px; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; border: none; transition: opacity 0.15s; }
+.modal-btn:active { opacity: 0.8; }
+.modal-cancel { background: var(--bg3); color: var(--t2); }
+.modal-confirm { background: var(--pink); color: #fff; }
+
+/* TOAST */
+.toast { position: absolute; bottom: 100px; left: 14px; right: 14px; padding: 12px 16px; border-radius: 10px; font-size: 14px; font-weight: 600; text-align: center; z-index: 100; display: none; animation: toastIn 0.3s ease; }
+.toast.success { background: var(--green-bg); color: var(--green); border: 0.5px solid #2a6a3a; }
+.toast.error { background: var(--red-bg); color: var(--red); border: 0.5px solid #4a1a1a; }
+@keyframes toastIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+/* UMLAGER chips */
+.uml-chip { background: #1a1a2e; border: 0.5px solid #3a3a5a; border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; display: flex; align-items: center; gap: 10px; }
+.uml-chip-name { color: var(--t1); font-size: 14px; font-weight: 600; }
+.uml-chip-sub { color: var(--t3); font-size: 12px; margin-top: 2px; font-variant-numeric: tabular-nums; }
+.uml-remove { color: var(--pink); font-size: 22px; cursor: pointer; padding: 2px; line-height: 1; }
+.uml-empty { padding: 30px 14px; text-align: center; color: var(--t4); font-size: 14px; }
+.count-badge { background: var(--pink); color: #fff; border-radius: 12px; padding: 2px 8px; font-size: 12px; font-weight: 700; margin-left: auto; }
+.scan-err { color: var(--red); font-size: 12px; margin-top: 6px; display: none; }
+
+/* SOLD LIST */
+.sold-item { background: var(--bg1); border-bottom: 0.5px solid var(--border); padding: 11px 14px; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: background 0.1s; }
+.sold-item:active { background: var(--bg2); }
+.sold-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.sold-dot.ok { background: var(--green); }
+.sold-dot.warn { background: var(--red); }
+.sold-name { color: var(--t1); font-size: 14px; font-weight: 600; }
+.sold-meta { color: var(--t3); font-size: 12px; margin-top: 2px; font-variant-numeric: tabular-nums; }
+.sold-cust { color: var(--green); font-size: 12px; margin-top: 2px; }
+
+/* FOTO screens */
+.foto-item { background: var(--bg1); border-bottom: 0.5px solid var(--border); padding: 10px 14px; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: background 0.1s; }
+.foto-item:active { background: var(--bg2); }
+.foto-thumb { width: 50px; height: 50px; background: var(--bg3); border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; overflow: hidden; position: relative; }
+.foto-thumb img { width: 100%; height: 100%; object-fit: cover; position: absolute; }
+.foto-count-badge { position: absolute; bottom: 2px; right: 2px; background: var(--pink); color: #fff; font-size: 9px; border-radius: 4px; padding: 1px 4px; font-weight: 700; }
+.foto-status-ok { color: var(--green); font-size: 12px; margin-top: 2px; }
+.foto-status-warn { color: var(--red); font-size: 12px; margin-top: 2px; }
+.photo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 12px 14px; }
+.photo-cell { aspect-ratio: 1; background: var(--bg2); border-radius: 10px; border: 0.5px solid var(--bg4); display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; overflow: hidden; position: relative; transition: border-color 0.15s; }
+.photo-cell:active { opacity: 0.8; }
+.photo-cell img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.photo-cell span { color: var(--t4); font-size: 12px; margin-top: 6px; }
+.photo-cell svg { color: var(--t4); width: 28px; height: 28px; }
+
+/* LOADING */
+.loading-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 200; }
+.spinner { width: 36px; height: 36px; border: 3px solid var(--bg4); border-top-color: var(--pink); border-radius: 50%; animation: spin 0.7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ADMIN PIN */
+.pin-screen { background: var(--bg0); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 30px; flex: 1; }
+.pin-title { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+.pin-sub { color: var(--t3); font-size: 14px; margin-bottom: 32px; text-align: center; }
+.pin-dots { display: flex; gap: 14px; margin-bottom: 32px; }
+.pin-dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--bg4); transition: all 0.15s; }
+.pin-dot.filled { background: var(--pink); border-color: var(--pink); }
+.pin-pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; width: 100%; max-width: 260px; }
+.pin-key { background: var(--bg2); border: 0.5px solid var(--bg4); border-radius: 14px; padding: 18px; font-size: 22px; font-weight: 600; cursor: pointer; text-align: center; transition: background 0.1s; }
+.pin-key:active { background: var(--bg3); }
+.pin-key.del { font-size: 16px; color: var(--t3); }
+.pin-error { color: var(--red); font-size: 13px; margin-top: 16px; min-height: 20px; }
+
+/* EMPTY STATE */
+.empty-state { padding: 50px 20px; text-align: center; color: var(--t4); }
+.empty-state svg { width: 48px; height: 48px; margin-bottom: 12px; opacity: 0.3; }
+
+/* CONNECTION STATUS */
+.conn-status { position: absolute; top: 0; left: 0; right: 0; padding: 6px; text-align: center; font-size: 12px; font-weight: 600; z-index: 300; transform: translateY(-100%); transition: transform 0.3s; }
+.conn-status.show { transform: translateY(0); }
+.conn-status.offline { background: var(--red-bg); color: var(--red); }
+.conn-status.online { background: var(--green-bg); color: var(--green); }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- CONNECTION STATUS -->
+  <div class="conn-status" id="conn-status"></div>
+
+  <!-- LAGERBESTAND SCREEN -->
+  <div class="screen active" id="screen-lager">
+    <div class="status-bar"><span>19:07</span><div class="right">●●● WiFi 🔋</div></div>
+    <div class="top-bar">
+      <div class="app-icon">🏰</div>
+      <h1>Lagerbestand</h1>
+      <span id="sync-indicator" style="color:var(--t3);font-size:12px;display:none">↻</span>
+    </div>
+    <div class="search-wrap">
+      <div class="search-inner">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input class="search-input" id="search-input" placeholder="Name, Seriennr., Artikelnr. …" oninput="doSearch(this.value)"/>
+      </div>
+    </div>
+    <div class="stats-row">
+      <div class="stat-card neutral" id="stat-lager">
+        <div class="stat-n" id="stat-lager-n">–</div>
+        <div class="stat-l">Im Lager</div>
+      </div>
+      <div class="stat-card neutral clickable" id="stat-sold" onclick="showScreen('screen-fotos')">
+        <div class="stat-n" id="stat-sold-n">–</div>
+        <div class="stat-l" id="stat-sold-l">Heute verkauft</div>
+      </div>
+    </div>
+    <div class="scroll-content" id="lager-list"></div>
+    <div class="fab-row">
+      <button class="fab fab-secondary" onclick="showScreen('screen-umlager')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M7 16V4m0 0L3 8m4-4 4 4"/><path d="M17 8v12m0 0 4-4m-4 4-4-4"/></svg>
+        Umlagerung
+      </button>
+      <button class="fab fab-primary" onclick="showScreen('screen-einbuchen')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+        Einbuchen
+      </button>
+    </div>
+    <div class="toast" id="toast-lager"></div>
+    <div class="loading-overlay" id="loading-lager" style="display:none"><div class="spinner"></div></div>
+  </div>
+
+  <!-- EINBUCHEN SCREEN -->
+  <div class="screen" id="screen-einbuchen">
+    <div class="status-bar"><span>19:07</span><div class="right">●●● WiFi 🔋</div></div>
+    <div class="top-bar">
+      <span class="back-btn" onclick="goBack()">‹</span>
+      <div class="app-icon">🏰</div>
+      <h1>Einbuchen</h1>
+    </div>
+    <div class="scroll-content">
+      <div class="form-section">
+        <div class="hint-box">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+          1–3 Hüpfburgen pro Stellplatz möglich
+        </div>
+        <div class="form-group">
+          <div class="form-label">Seriennummer 1 <span class="req">*</span></div>
+          <div class="input-wrap">
+            <input class="form-input" id="ein-s1" placeholder="z.B. 2025.12.114"/>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h.01M14 17h3M17 14v7M20 17h.01M20 20h.01"/></svg>
+          </div>
+        </div>
+        <div class="form-group">
+          <div class="form-label">Seriennummer 2 <span style="color:var(--t4);font-size:11px">(optional)</span></div>
+          <div class="input-wrap">
+            <input class="form-input" id="ein-s2" placeholder="z.B. 2025.12.115"/>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h.01M14 17h3M17 14v7M20 17h.01M20 20h.01"/></svg>
+          </div>
+        </div>
+        <div class="form-group">
+          <div class="form-label">Seriennummer 3 <span style="color:var(--t4);font-size:11px">(optional)</span></div>
+          <div class="input-wrap">
+            <input class="form-input" id="ein-s3" placeholder="z.B. 2025.12.116"/>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h.01M14 17h3M17 14v7M20 17h.01M20 20h.01"/></svg>
+          </div>
+        </div>
+        <div class="form-divider"></div>
+        <div class="form-group">
+          <div class="form-label">Palettenstellplatz <span class="req">*</span></div>
+          <div class="input-wrap">
+            <input class="form-input" id="ein-platz" placeholder="z.B. 12A - 1"/>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h.01M14 17h3M17 14v7M20 17h.01M20 20h.01"/></svg>
+          </div>
+        </div>
+        <div class="form-group">
+          <div class="form-label">Eingelagert am <span class="req">*</span></div>
+          <div class="input-wrap">
+            <input class="form-input" id="ein-date" type="datetime-local"/>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="action-btn btn-cancel" onclick="goBack()">Abbrechen</button>
+          <button class="action-btn btn-save" onclick="doEinbuchen()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>
+            Speichern
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="loading-overlay" id="loading-einbuchen" style="display:none"><div class="spinner"></div></div>
+  </div>
+
+  <!-- DETAIL SCREEN -->
+  <div class="screen" id="screen-detail">
+    <div class="status-bar"><span>19:07</span><div class="right">●●● WiFi 🔋</div></div>
+    <div class="top-bar">
+      <span class="back-btn" onclick="goBack()">‹</span>
+      <div class="app-icon">🏰</div>
+      <h1 id="detail-title">Detail</h1>
+    </div>
+    <div class="scroll-content">
+      <div class="detail-hero">
+        <div class="detail-thumb" id="detail-thumb">🏰</div>
+        <div style="flex:1;min-width:0">
+          <div class="detail-name" id="detail-name">–</div>
+          <div class="detail-art">Art.-Nr. <span id="detail-art">–</span></div>
+        </div>
+        <span class="in-stock-badge">Im Lager</span>
+      </div>
+      <div class="loc-section">
+        <div class="loc-label">Lagerplatz</div>
+        <span class="loc-value" id="detail-platz">–</span>
+      </div>
+      <div class="info-card">
+        <div class="info-row"><span class="info-key">Seriennummer</span><span class="info-val" id="detail-serial">–</span></div>
+        <div class="info-row"><span class="info-key">Eingelagert am</span><span class="info-val" id="detail-date">–</span></div>
+        <div class="info-row" id="detail-pal-row" style="display:none"><span class="info-key">Palette mit</span><span class="info-val" id="detail-pal">–</span></div>
+      </div>
+      <div class="hint-warn" id="detail-oldest-warn" style="display:none">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+        Älteste Hüpfburg dieses Modells – zuerst versenden!
+      </div>
+      <button class="action-btn btn-sell" onclick="showSellModal()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+        Als verkauft markieren
+      </button>
+      <button class="action-btn btn-move" onclick="showScreen('screen-umlager')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 16V4m0 0L3 8m4-4 4 4"/><path d="M17 8v12m0 0 4-4m-4 4-4-4"/></svg>
+        Umlagerung starten
+      </button>
+    </div>
+    <!-- SELL MODAL -->
+    <div class="modal-overlay" id="sell-modal" style="display:none">
+      <div class="modal-sheet">
+        <div class="modal-handle"></div>
+        <div class="modal-title">Hüpfburg verkaufen</div>
+        <div style="color:var(--t3);font-size:13px;margin-bottom:12px">Kundenname eingeben:</div>
+        <input class="modal-input" id="sell-customer" placeholder="Kundenname"/>
+        <div class="modal-btns">
+          <button class="modal-btn modal-cancel" onclick="document.getElementById('sell-modal').style.display='none'">Abbrechen</button>
+          <button class="modal-btn modal-confirm" onclick="doVerkauf()">Verkaufen ✓</button>
+        </div>
+      </div>
+    </div>
+    <div class="loading-overlay" id="loading-detail" style="display:none"><div class="spinner"></div></div>
+  </div>
+
+  <!-- UMLAGERUNG SCREEN -->
+  <div class="screen" id="screen-umlager">
+    <div class="status-bar"><span>19:07</span><div class="right">●●● WiFi 🔋</div></div>
+    <div class="top-bar">
+      <span class="back-btn" onclick="goBack()">‹</span>
+      <div class="app-icon">🏰</div>
+      <h1>Umlagerung</h1>
+      <span class="count-badge" id="uml-badge" style="display:none">0</span>
+    </div>
+    <div class="scroll-content">
+      <div class="form-section" style="padding-bottom:0">
+        <div class="hint-box">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h.01M14 17h3M17 14v7M20 17h.01M20 20h.01"/></svg>
+          Seriennummer scannen oder eingeben
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input class="form-input" id="uml-scan-input" placeholder="Seriennummer …" style="flex:1;padding-right:14px" onkeydown="if(event.key==='Enter')addUmlItem()"/>
+          <button style="background:var(--bg3);border:0.5px solid var(--bg4);border-radius:10px;padding:12px 14px;color:var(--t1);font-size:13px;font-weight:600;white-space:nowrap;cursor:pointer;display:flex;align-items:center;gap:6px" onclick="addUmlItem()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+            Add
+          </button>
+        </div>
+        <div class="scan-err" id="uml-scan-err"></div>
+      </div>
+      <div style="padding:8px 14px 4px;color:var(--t3);font-size:12px;font-weight:500" id="uml-selected-hdr"></div>
+      <div id="uml-selected-list" style="padding:0 14px"></div>
+      <div class="uml-empty" id="uml-empty">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:40px;height:40px;color:var(--t4);display:block;margin:0 auto 10px"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h.01M14 17h3M17 14v7M20 17h.01M20 20h.01"/></svg>
+        Noch keine Hüpfburgen hinzugefügt
+      </div>
+      <div class="form-section" style="padding-top:8px">
+        <div class="form-group">
+          <div class="form-label">Neuer Stellplatz <span class="req">*</span></div>
+          <div class="input-wrap">
+            <input class="form-input" id="uml-platz" placeholder="z.B. 7C - 2"/>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h.01M14 17h3M17 14v7M20 17h.01M20 20h.01"/></svg>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="action-btn btn-cancel" onclick="clearUml();goBack()">Abbrechen</button>
+          <button class="action-btn" style="background:var(--amber-bg);color:var(--amber);border:0.5px solid #3d2a00;flex:1;justify-content:center;font-size:15px;font-weight:600" onclick="doUmlagerung()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>
+            Umlagern
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="loading-overlay" id="loading-umlager" style="display:none"><div class="spinner"></div></div>
+  </div>
+
+  <!-- VERKAUFT SCREEN -->
+  <div class="screen" id="screen-verkauft">
+    <div class="status-bar"><span>19:07</span><div class="right">●●● WiFi 🔋</div></div>
+    <div class="top-bar">
+      <div class="app-icon">🏰</div>
+      <h1>Verkaufte Hüpfburgen</h1>
+    </div>
+    <div class="search-wrap">
+      <div class="search-inner">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input class="search-input" id="sold-search" placeholder="Kunde oder Modell …" oninput="filterSold(this.value)"/>
+      </div>
+    </div>
+    <div class="scroll-content" id="sold-list"></div>
+    <div class="bottom-nav">
+      <button class="nav-btn" onclick="switchTab('lager')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+        Lager
+      </button>
+      <button class="nav-btn active" onclick="switchTab('verkauft')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        Verkauft
+      </button>
+      <button class="nav-btn" onclick="switchTab('fotos')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        Fotos
+      </button>
+    </div>
+  </div>
+
+  <!-- FOTOS SCREEN -->
+  <div class="screen" id="screen-fotos">
+    <div class="status-bar"><span>19:07</span><div class="right">●●● WiFi 🔋</div></div>
+    <div class="top-bar">
+      <div class="app-icon">🏰</div>
+      <h1>Versandfotos heute</h1>
+      <span style="font-size:12px;font-weight:600;margin-left:auto" id="foto-hdr-count"></span>
+    </div>
+    <div class="scroll-content" id="foto-list"></div>
+    <div class="bottom-nav">
+      <button class="nav-btn" onclick="switchTab('lager')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+        Lager
+      </button>
+      <button class="nav-btn" onclick="switchTab('verkauft')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        Verkauft
+      </button>
+      <button class="nav-btn active" onclick="switchTab('fotos')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        Fotos
+      </button>
+    </div>
+  </div>
+
+  <!-- FOTO DETAIL SCREEN -->
+  <div class="screen" id="screen-foto-detail">
+    <div class="status-bar"><span>19:07</span><div class="right">●●● WiFi 🔋</div></div>
+    <div class="top-bar">
+      <span class="back-btn" onclick="goBack()">‹</span>
+      <div class="app-icon">🏰</div>
+      <h1 id="foto-detail-title">Versandfotos</h1>
+    </div>
+    <div class="scroll-content">
+      <div style="padding:10px 14px 4px;color:var(--t3);font-size:13px" id="foto-detail-meta"></div>
+      <div class="photo-grid" id="foto-detail-grid"></div>
+      <div style="padding:4px 14px 14px;color:var(--t4);font-size:12px">Tippe auf ein Feld um ein Foto hinzuzufügen</div>
+    </div>
+    <div class="loading-overlay" id="loading-foto" style="display:none"><div class="spinner"></div></div>
+  </div>
+
+</div>
+
+<script>
+// ─── CONFIG ───────────────────────────────────────────────────────────────────
+const SUPABASE_URL = 'https://yepreioxhmajhkmvaosw.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_SoDUT1Y-bF-ZdzJxiJm2Pg_IXRgEd_6';
+const ADMIN_PIN = '1234'; // ÄNDERN!
+const TODAY = new Date().toISOString().split('T')[0];
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+let allItems = [];
+let soldItems = [];
+let modelPhotos = {};
+let selectedItem = null;
+let umlSelected = [];
+let currentFotoSoldIdx = null;
+let screenStack = ['screen-lager'];
+let searchTerm = '';
+
+// ─── SUPABASE HELPER ──────────────────────────────────────────────────────────
+async function sb(method, table, body, query = '') {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}${query}`, {
+    method,
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': method === 'POST' ? 'return=representation' : 'return=minimal'
+    },
+    body: body ? JSON.stringify(body) : undefined
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(err);
+  }
+  if (method === 'GET' || (method === 'POST' && res.status !== 204)) {
+    const text = await res.text();
+    return text ? JSON.parse(text) : [];
+  }
+  return null;
+}
+
+// ─── SERIAL PARSING ───────────────────────────────────────────────────────────
+function parseSerial(s) {
+  const m = (s||'').match(/^(\d{4})\.(\d{2,3})\.(\d+)$/);
+  if (!m) return null;
+  return { year: +m[1], cont: +m[2], num: +m[3] };
+}
+function compareSerial(a, b) {
+  const pa = parseSerial(a), pb = parseSerial(b);
+  if (!pa || !pb) return 0;
+  if (pa.year !== pb.year) return pa.year - pb.year;
+  if (pa.cont !== pb.cont) return pa.cont - pb.cont;
+  return pa.num - pb.num;
+}
+function getOldest(artikel) {
+  const same = allItems.filter(i => i.artikelnummer === artikel);
+  if (same.length < 2) return null;
+  same.sort((a,b) => compareSerial(a.seriennummer, b.seriennummer));
+  return same[0].seriennummer;
+}
+
+// ─── SCREEN NAVIGATION ───────────────────────────────────────────────────────
+function showScreen(id, push = true) {
+  const current = screenStack[screenStack.length - 1];
+  document.getElementById(current)?.classList.remove('active');
+  document.getElementById(current)?.classList.add('prev');
+  document.getElementById(id)?.classList.add('active');
+  document.getElementById(id)?.classList.remove('prev');
+  if (push && id !== current) screenStack.push(id);
+  setTimeout(() => document.getElementById(current)?.classList.remove('prev'), 350);
+}
+function goBack() {
+  if (screenStack.length <= 1) return;
+  const current = screenStack.pop();
+  const prev = screenStack[screenStack.length - 1];
+  document.getElementById(current)?.classList.remove('active');
+  document.getElementById(prev)?.classList.add('active');
+  document.getElementById(prev)?.classList.remove('prev');
+}
+function switchTab(tab) {
+  const map = { lager: 'screen-lager', verkauft: 'screen-verkauft', fotos: 'screen-fotos' };
+  screenStack = [map[tab]];
+  document.querySelectorAll('.screen').forEach(s => { s.classList.remove('active'); s.classList.remove('prev'); });
+  document.getElementById(map[tab])?.classList.add('active');
+  if (tab === 'verkauft') renderSold('');
+  if (tab === 'fotos') renderFotoList();
+}
+
+// ─── LOADING STATE ────────────────────────────────────────────────────────────
+function setLoading(id, on) {
+  const el = document.getElementById('loading-' + id);
+  if (el) el.style.display = on ? 'flex' : 'none';
+}
+
+// ─── TOAST ────────────────────────────────────────────────────────────────────
+function showToast(msg, type = 'success', screenId = 'lager') {
+  const t = document.getElementById('toast-' + screenId);
+  if (!t) return;
+  t.textContent = msg;
+  t.className = 'toast ' + type;
+  t.style.display = 'block';
+  setTimeout(() => t.style.display = 'none', 3000);
+}
+
+// ─── LOAD DATA ────────────────────────────────────────────────────────────────
+async function loadLager() {
+  setLoading('lager', true);
+  try {
+    allItems = await sb('GET', 'lagerbestand', null, '?order=erstellt_am.desc');
+    soldItems = await sb('GET', 'verkaufte_huepfburgen', null, '?order=verkauft_am.desc');
+    renderList(allItems, searchTerm);
+    updateSoldStat();
+  } catch(e) {
+    showToast('Verbindungsfehler – offline?', 'error');
+  }
+  setLoading('lager', false);
+}
+
+// ─── RENDER LIST ──────────────────────────────────────────────────────────────
+function renderList(items, query) {
+  const grouped = {};
+  items.forEach(it => {
+    const k = (it.name || '?')[0].toUpperCase();
+    if (!grouped[k]) grouped[k] = [];
+    grouped[k].push(it);
+  });
+  const keys = Object.keys(grouped).sort();
+  let html = '';
+  const q = (query || '').toLowerCase().trim();
+  keys.forEach(k => {
+    html += `<div class="section-hdr">${k}</div>`;
+    grouped[k].forEach(it => {
+      const oldest = q ? getOldest(it.artikelnummer) : null;
+      const isOldest = oldest && it.seriennummer === oldest;
+      const pal = it.palette_seriennummern || [];
+      const palCount = pal.filter(s => s !== it.seriennummer).length;
+      const imgHtml = modelPhotos[it.artikelnummer]
+        ? `<img src="${modelPhotos[it.artikelnummer]}" alt="${it.name}"/>`
+        : '🏰';
+      html += `<div class="list-item" onclick="showDetail('${it.id}')">
+        <div class="item-thumb${isOldest ? ' oldest-border' : ''}">${imgHtml}</div>
+        <div class="item-info">
+          <div class="item-name">${it.name || '–'}</div>
+          <div class="item-serial">${it.seriennummer}</div>
+          ${isOldest ? '<span class="oldest-badge">⚠ Älteste – zuerst versenden</span>' : ''}
+        </div>
+        <div class="item-right">
+          <span class="platz-badge">${it.palettenstellplatz || '–'}</span>
+          ${palCount > 0 ? `<span class="pal-badge">📦 ×${palCount + 1}</span>` : ''}
+        </div>
+      </div>`;
+    });
+  });
+  document.getElementById('lager-list').innerHTML = html || '<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg><div>Keine Einträge gefunden</div></div>';
+  document.getElementById('stat-lager-n').textContent = items.length;
+}
+
+function doSearch(q) {
+  searchTerm = q;
+  if (!q) { renderList(allItems, ''); return; }
+  const lq = q.toLowerCase();
+  renderList(allItems.filter(it =>
+    (it.name||'').toLowerCase().includes(lq) ||
+    (it.seriennummer||'').toLowerCase().includes(lq) ||
+    (it.artikelnummer||'').toLowerCase().includes(lq) ||
+    (it.palettenstellplatz||'').toLowerCase().includes(lq)
+  ), q);
+}
+
+function updateSoldStat() {
+  const today = soldItems.filter(i => (i.verkauft_am||'').startsWith(TODAY));
+  const missing = today.filter(i => !(i.foto_urls||[]).length).length;
+  document.getElementById('stat-sold-n').textContent = today.length;
+  const card = document.getElementById('stat-sold');
+  const lbl = document.getElementById('stat-sold-l');
+  if (missing > 0) {
+    card.className = 'stat-card warn clickable';
+    lbl.textContent = missing + ' ohne Fotos ⚠';
+  } else if (today.length > 0) {
+    card.className = 'stat-card good clickable';
+    lbl.textContent = 'Heute verkauft ✓';
+  } else {
+    card.className = 'stat-card neutral clickable';
+    lbl.textContent = 'Heute verkauft';
+  }
+}
+
+// ─── DETAIL ───────────────────────────────────────────────────────────────────
+function showDetail(id) {
+  selectedItem = allItems.find(i => i.id === id);
+  if (!selectedItem) return;
+  document.getElementById('detail-title').textContent = selectedItem.name || '–';
+  document.getElementById('detail-name').textContent = selectedItem.name || '–';
+  document.getElementById('detail-art').textContent = selectedItem.artikelnummer || '–';
+  document.getElementById('detail-platz').textContent = selectedItem.palettenstellplatz || '–';
+  document.getElementById('detail-serial').textContent = selectedItem.seriennummer || '–';
+  const d = selectedItem.eingelagert_am ? new Date(selectedItem.eingelagert_am).toLocaleString('de-DE') : '–';
+  document.getElementById('detail-date').textContent = d;
+  const mates = (selectedItem.palette_seriennummern || []).filter(s => s !== selectedItem.seriennummer);
+  const pr = document.getElementById('detail-pal-row');
+  if (mates.length) { pr.style.display = 'flex'; document.getElementById('detail-pal').textContent = mates.join(', '); }
+  else pr.style.display = 'none';
+  const oldest = getOldest(selectedItem.artikelnummer);
+  document.getElementById('detail-oldest-warn').style.display = (oldest && selectedItem.seriennummer === oldest) ? 'flex' : 'none';
+  const thumb = document.getElementById('detail-thumb');
+  if (modelPhotos[selectedItem.artikelnummer]) {
+    thumb.innerHTML = `<img src="${modelPhotos[selectedItem.artikelnummer]}" style="width:100%;height:100%;object-fit:cover"/>`;
+  } else { thumb.innerHTML = '🏰'; }
+  document.getElementById('sell-modal').style.display = 'none';
+  document.getElementById('sell-customer').value = '';
+  showScreen('screen-detail');
+}
+
+// ─── VERKAUFEN ────────────────────────────────────────────────────────────────
+function showSellModal() {
+  document.getElementById('sell-modal').style.display = 'flex';
+  setTimeout(() => document.getElementById('sell-customer').focus(), 150);
+}
+async function doVerkauf() {
+  const cn = document.getElementById('sell-customer').value.trim();
+  if (!cn) { document.getElementById('sell-customer').style.borderColor = 'var(--red)'; return; }
+  if (!selectedItem) return;
+  setLoading('detail', true);
+  try {
+    await sb('POST', 'verkaufte_huepfburgen', {
+      seriennummer: selectedItem.seriennummer,
+      name: selectedItem.name,
+      artikelnummer: selectedItem.artikelnummer,
+      palettenstellplatz: selectedItem.palettenstellplatz,
+      kundenname: cn,
+      foto_urls: []
+    });
+    await sb('DELETE', 'lagerbestand', null, `?id=eq.${selectedItem.id}`);
+    allItems = allItems.filter(i => i.id !== selectedItem.id);
+    const newSold = await sb('GET', 'verkaufte_huepfburgen', null, '?order=verkauft_am.desc&limit=1');
+    if (newSold?.length) soldItems.unshift(newSold[0]);
+    document.getElementById('sell-modal').style.display = 'none';
+    renderList(allItems, searchTerm);
+    updateSoldStat();
+    renderFotoList();
+    goBack();
+    showToast('✓ Verkauft – Versandfotos unter "Fotos" hinzufügen', 'success');
+  } catch(e) {
+    showToast('Fehler beim Speichern', 'error');
+  }
+  setLoading('detail', false);
+}
+
+// ─── EINBUCHEN ────────────────────────────────────────────────────────────────
+async function doEinbuchen() {
+  const s1 = document.getElementById('ein-s1').value.trim();
+  const platz = document.getElementById('ein-platz').value.trim();
+  let hasErr = false;
+  if (!s1) { document.getElementById('ein-s1').classList.add('error'); hasErr = true; }
+  if (!platz) { document.getElementById('ein-platz').classList.add('error'); hasErr = true; }
+  if (hasErr) return;
+  const s2 = document.getElementById('ein-s2').value.trim();
+  const s3 = document.getElementById('ein-s3').value.trim();
+  const serials = [s1, s2, s3].filter(Boolean);
+  const dateVal = document.getElementById('ein-date').value;
+  const date = dateVal ? new Date(dateVal).toISOString() : new Date().toISOString();
+  setLoading('einbuchen', true);
+  try {
+    const rows = serials.map(s => ({
+      seriennummer: s,
+      palettenstellplatz: platz,
+      eingelagert_am: date,
+      palette_seriennummern: serials
+    }));
+    const inserted = await sb('POST', 'lagerbestand', rows);
+    if (inserted?.length) allItems = [...inserted, ...allItems];
+    ['ein-s1','ein-s2','ein-s3','ein-platz'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) { el.value = ''; el.classList.remove('error'); }
+    });
+    renderList(allItems, searchTerm);
+    goBack();
+    showToast(`✓ ${serials.length} Hüpfburg(en) eingebucht auf ${platz}`, 'success');
+  } catch(e) {
+    showToast('Fehler beim Einbuchen: ' + e.message, 'error');
+  }
+  setLoading('einbuchen', false);
+}
+
+// ─── UMLAGERUNG ───────────────────────────────────────────────────────────────
+function addUmlItem() {
+  const inp = document.getElementById('uml-scan-input');
+  const val = inp.value.trim();
+  const errEl = document.getElementById('uml-scan-err');
+  if (!val) return;
+  if (umlSelected.find(i => i.seriennummer === val)) {
+    errEl.textContent = 'Bereits hinzugefügt: ' + val;
+    errEl.style.display = 'block'; inp.value = ''; return;
+  }
+  const found = allItems.find(i => i.seriennummer === val);
+  if (!found) {
+    errEl.textContent = 'Seriennummer nicht gefunden: ' + val;
+    errEl.style.display = 'block'; inp.value = ''; return;
+  }
+  errEl.style.display = 'none';
+  umlSelected.push(found);
+  inp.value = '';
+  renderUmlSelected();
+  inp.focus();
+}
+function removeUmlItem(serial) {
+  umlSelected = umlSelected.filter(i => i.seriennummer !== serial);
+  renderUmlSelected();
+}
+function clearUml() { umlSelected = []; renderUmlSelected(); }
+function renderUmlSelected() {
+  const badge = document.getElementById('uml-badge');
+  const hdr = document.getElementById('uml-selected-hdr');
+  const empty = document.getElementById('uml-empty');
+  badge.style.display = umlSelected.length ? 'inline-block' : 'none';
+  badge.textContent = umlSelected.length;
+  hdr.textContent = umlSelected.length ? 'Ausgewählte Hüpfburgen:' : '';
+  empty.style.display = umlSelected.length ? 'none' : 'block';
+  document.getElementById('uml-selected-list').innerHTML = umlSelected.map(it => `
+    <div class="uml-chip">
+      <div style="flex:1;min-width:0">
+        <div class="uml-chip-name">${it.name || '–'}</div>
+        <div class="uml-chip-sub">${it.seriennummer} · ${it.palettenstellplatz || '–'}</div>
+      </div>
+      <span class="uml-remove" onclick="removeUmlItem('${it.seriennummer}')">×</span>
+    </div>`).join('');
+}
+async function doUmlagerung() {
+  const newPlatz = document.getElementById('uml-platz').value.trim();
+  if (!newPlatz) { document.getElementById('uml-platz').classList.add('error'); return; }
+  if (!umlSelected.length) { showToast('Bitte mind. eine Hüpfburg hinzufügen', 'error'); return; }
+  setLoading('umlager', true);
+  try {
+    const newPal = umlSelected.map(i => i.seriennummer);
+    const oldPlatz = umlSelected[0].palettenstellplatz;
+    for (const sel of umlSelected) {
+      await sb('PATCH', 'lagerbestand', { palettenstellplatz: newPlatz, palette_seriennummern: newPal }, `?id=eq.${sel.id}`);
+      await sb('POST', 'umlagerungsprotokoll', {
+        seriennummer: sel.seriennummer,
+        name: sel.name,
+        alter_stellplatz: sel.palettenstellplatz,
+        neuer_stellplatz: newPlatz
+      });
+      const idx = allItems.findIndex(i => i.id === sel.id);
+      if (idx > -1) { allItems[idx].palettenstellplatz = newPlatz; allItems[idx].palette_seriennummern = newPal; }
+    }
+    const cnt = umlSelected.length;
+    clearUml();
+    document.getElementById('uml-platz').value = '';
+    renderList(allItems, searchTerm);
+    goBack();
+    showToast(`✓ ${cnt} Hüpfburg(en) auf ${newPlatz} umgelagert`, 'success');
+  } catch(e) {
+    showToast('Fehler beim Umlagern', 'error');
+  }
+  setLoading('umlager', false);
+}
+
+// ─── VERKAUFT LIST ────────────────────────────────────────────────────────────
+function renderSold(q) {
+  const flt = q ? soldItems.filter(i =>
+    (i.name||'').toLowerCase().includes(q.toLowerCase()) ||
+    (i.kundenname||'').toLowerCase().includes(q.toLowerCase())
+  ) : soldItems;
+  let html = '', lastDate = '';
+  flt.forEach(it => {
+    const d = (it.verkauft_am||'').split('T')[0];
+    const dFmt = d ? new Date(d).toLocaleDateString('de-DE') : '–';
+    if (d !== lastDate) { html += `<div class="section-hdr">${dFmt}</div>`; lastDate = d; }
+    const hasFotos = (it.foto_urls||[]).length > 0;
+    const isToday = d === TODAY;
+    const idx = soldItems.indexOf(it);
+    html += `<div class="sold-item" onclick="${isToday ? `showFotoDetail(${idx})` : ''}">
+      <div class="sold-dot ${hasFotos || !isToday ? 'ok' : 'warn'}"></div>
+      <div style="flex:1;min-width:0">
+        <div class="sold-name">${it.name||'–'}</div>
+        <div class="sold-meta">${it.seriennummer} · ${it.palettenstellplatz||'–'} · ${(it.verkauft_am||'').slice(11,16)}</div>
+        <div class="sold-cust">👤 ${it.kundenname||'–'}</div>
+      </div>
+      ${isToday ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${hasFotos?'var(--green)':'var(--red)'}" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>` : ''}
+    </div>`;
+  });
+  document.getElementById('sold-list').innerHTML = html || '<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><div>Keine Einträge</div></div>';
+}
+function filterSold(q) { renderSold(q); }
+
+// ─── FOTO LIST ────────────────────────────────────────────────────────────────
+function renderFotoList() {
+  const today = soldItems.filter(i => (i.verkauft_am||'').startsWith(TODAY));
+  const missing = today.filter(i => !(i.foto_urls||[]).length).length;
+  const hdr = document.getElementById('foto-hdr-count');
+  if (hdr) {
+    if (missing > 0) { hdr.textContent = missing + ' fehlen noch'; hdr.style.color = 'var(--red)'; }
+    else if (today.length > 0) { hdr.textContent = 'Alle vollständig ✓'; hdr.style.color = 'var(--green)'; }
+    else hdr.textContent = '';
+  }
+  let html = '';
+  today.forEach(it => {
+    const idx = soldItems.indexOf(it);
+    const cnt = (it.foto_urls||[]).length;
+    const thumb = cnt > 0 ? `<img src="${it.foto_urls[0]}" style="position:absolute;width:100%;height:100%;object-fit:cover;top:0;left:0"/>` : '';
+    html += `<div class="foto-item" onclick="showFotoDetail(${idx})">
+      <div class="foto-thumb" style="border:1.5px solid ${cnt>0?'var(--green-dark)':'#4a1a1a'}">
+        ${thumb}
+        ${cnt === 0 ? `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>` : ''}
+        ${cnt > 0 ? `<span class="foto-count-badge">${cnt}</span>` : ''}
+      </div>
+      <div style="flex:1;min-width:0">
+        <div class="sold-name">${it.name||'–'}</div>
+        <div class="sold-meta" style="font-variant-numeric:tabular-nums">${it.seriennummer}</div>
+        <div class="sold-meta">${it.kundenname||'–'} · ${(it.verkauft_am||'').slice(11,16)}</div>
+        <div class="${cnt>0?'foto-status-ok':'foto-status-warn'}">${cnt}/4 Fotos${cnt===0?' – fehlt noch!':cnt>=4?' ✓':''}</div>
+      </div>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--t4)" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+    </div>`;
+  });
+  const el = document.getElementById('foto-list');
+  if (el) el.innerHTML = html || '<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg><div>Noch keine Verkäufe heute</div></div>';
+}
+
+// ─── FOTO DETAIL ──────────────────────────────────────────────────────────────
+function showFotoDetail(idx) {
+  currentFotoSoldIdx = idx;
+  const it = soldItems[idx];
+  document.getElementById('foto-detail-title').textContent = it.name || '–';
+  document.getElementById('foto-detail-meta').textContent = `${it.kundenname||'–'} · ${(it.verkauft_am||'').replace('T',' ').slice(0,16)} · ${it.palettenstellplatz||'–'}`;
+  renderFotoGrid(it);
+  showScreen('screen-foto-detail');
+}
+function renderFotoGrid(it) {
+  const photos = [...(it.foto_urls || [])];
+  while (photos.length < 4) photos.push(null);
+  document.getElementById('foto-detail-grid').innerHTML = photos.map((p, i) => `
+    <div class="photo-cell" onclick="pickPhoto(${i})">
+      ${p ? `<img src="${p}"/>` : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><path d="M12 11v4M10 13h4"/></svg><span>Foto ${i+1}</span>`}
+    </div>`).join('');
+}
+
+async function pickPhoto(slotIdx) {
+  if (currentFotoSoldIdx === null) return;
+  const input = document.createElement('input');
+  input.type = 'file'; input.accept = 'image/*'; input.capture = 'environment';
+  input.onchange = async e => {
+    const f = e.target.files[0]; if (!f) return;
+    setLoading('foto', true);
+    try {
+      // For prototype: store as base64. In production: upload to Google Drive
+      const reader = new FileReader();
+      reader.onload = async ev => {
+        const it = soldItems[currentFotoSoldIdx];
+        if (!it.foto_urls) it.foto_urls = [];
+        while (it.foto_urls.length < 4) it.foto_urls.push(null);
+        it.foto_urls[slotIdx] = ev.target.result;
+        it.foto_urls = it.foto_urls.filter(Boolean);
+        // Save to Supabase
+        await sb('PATCH', 'verkaufte_huepfburgen', { foto_urls: it.foto_urls }, `?id=eq.${it.id}`);
+        renderFotoGrid(it);
+        renderFotoList();
+        updateSoldStat();
+        setLoading('foto', false);
+      };
+      reader.readAsDataURL(f);
+    } catch(e) {
+      setLoading('foto', false);
+    }
+  };
+  input.click();
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+document.getElementById('ein-date').value = new Date().toISOString().slice(0,16);
+
+// Set current time in status bars
+const timeStr = new Date().toLocaleTimeString('de-DE', {hour:'2-digit',minute:'2-digit'});
+document.querySelectorAll('.status-bar span').forEach(el => el.textContent = timeStr);
+
+// Load data
+loadLager();
+
+// Auto-refresh every 60s
+setInterval(loadLager, 60000);
+</script>
+</body>
+</html>
