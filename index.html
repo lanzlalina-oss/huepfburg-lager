@@ -7,6 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0f0f0f">
 <title>Hüpfburg Lager</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
 <style>
 :root {
   --pink: #e85d8a; --green: #3adb7a; --green-bg: #0f2a1a;
@@ -202,6 +203,25 @@ html, body { height: 100%; overflow: hidden; background: var(--bg0); font-family
 .user-pill { background: var(--bg3); border-radius: 20px; padding: 4px 10px; font-size: 12px; color: var(--t2); display: flex; align-items: center; gap: 5px; cursor: pointer; }
 .user-pill.admin { background: #2a0a2a; color: #d87aff; }
 
+/* SCANNER */
+.scanner-overlay { position: fixed; inset: 0; background: #000; z-index: 500; display: none; flex-direction: column; }
+.scanner-overlay.active { display: flex; }
+.scanner-header { padding: 50px 16px 16px; display: flex; align-items: center; gap: 12px; background: rgba(0,0,0,0.8); }
+.scanner-close { color: #fff; font-size: 28px; cursor: pointer; line-height: 1; }
+.scanner-title { color: #fff; font-size: 17px; font-weight: 600; }
+.scanner-viewport { flex: 1; position: relative; overflow: hidden; }
+#scanner-video-container { width: 100%; height: 100%; }
+#scanner-video-container video { width: 100%; height: 100%; object-fit: cover; }
+#scanner-video-container canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+.scanner-frame { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; }
+.scanner-box { width: 80%; max-width: 300px; height: 120px; border: 2px solid var(--pink); border-radius: 12px; position: relative; }
+.scanner-box::before { content: ''; position: absolute; top: -2px; left: 20px; right: 20px; height: 3px; background: var(--pink); animation: scanLine 2s ease-in-out infinite; border-radius: 2px; }
+@keyframes scanLine { 0%,100% { top: -2px; } 50% { top: calc(100% - 1px); } }
+.scanner-hint { position: absolute; bottom: 0; left: 0; right: 0; padding: 20px 16px 40px; background: rgba(0,0,0,0.7); text-align: center; color: rgba(255,255,255,0.7); font-size: 14px; }
+.scanner-result { position: absolute; bottom: 90px; left: 16px; right: 16px; background: var(--green-bg); color: var(--green); border: 0.5px solid #2a6a3a; padding: 12px 16px; border-radius: 10px; text-align: center; font-size: 14px; font-weight: 600; display: none; animation: toastIn 0.3s ease; }
+.scan-btn { background: transparent; border: none; cursor: pointer; padding: 4px; display: flex; align-items: center; justify-content: center; color: var(--pink); }
+.scan-btn:active { opacity: 0.7; }
+
 /* LOADING */
 .loading-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 200; }
 .spinner { width: 36px; height: 36px; border: 3px solid var(--bg4); border-top-color: var(--pink); border-radius: 50%; animation: spin 0.7s linear infinite; }
@@ -290,23 +310,23 @@ html, body { height: 100%; overflow: hidden; background: var(--bg0); font-family
         <div class="hint-box"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>1–3 Hüpfburgen pro Stellplatz · Modell wird automatisch erkannt</div>
         <div class="form-group">
           <div class="form-label">Seriennummer 1 <span class="req">*</span></div>
-          <div class="input-wrap"><input class="form-input" id="ein-s1" placeholder="z.B. 2025.12.114" oninput="lookupSerial(this.value,'preview-1')"/><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></div>
+          <div class="input-wrap"><input class="form-input" id="ein-s1" placeholder="z.B. 2025.12.114" oninput="lookupSerial(this.value,'preview-1')"/><button class="scan-btn" onclick="openScanner('ein-s1','Seriennummer 1 scannen')" type="button"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h.01M14 17h3M17 14v7M20 17h.01M20 20h.01"/></svg></button></div>
           <div class="model-preview" id="preview-1"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg><span id="preview-1-text"></span></div>
         </div>
         <div class="form-group">
           <div class="form-label">Seriennummer 2 <span style="color:var(--t4);font-size:11px">(optional)</span></div>
-          <div class="input-wrap"><input class="form-input" id="ein-s2" placeholder="z.B. 2025.12.115" oninput="lookupSerial(this.value,'preview-2')"/><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></div>
+          <div class="input-wrap"><input class="form-input" id="ein-s2" placeholder="z.B. 2025.12.115" oninput="lookupSerial(this.value,'preview-2')"/><button class="scan-btn" onclick="openScanner('ein-s2','Seriennummer 2 scannen')" type="button"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h.01M14 17h3M17 14v7M20 17h.01M20 20h.01"/></svg></button></div>
           <div class="model-preview" id="preview-2"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg><span id="preview-2-text"></span></div>
         </div>
         <div class="form-group">
           <div class="form-label">Seriennummer 3 <span style="color:var(--t4);font-size:11px">(optional)</span></div>
-          <div class="input-wrap"><input class="form-input" id="ein-s3" placeholder="z.B. 2025.12.116" oninput="lookupSerial(this.value,'preview-3')"/><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></div>
+          <div class="input-wrap"><input class="form-input" id="ein-s3" placeholder="z.B. 2025.12.116" oninput="lookupSerial(this.value,'preview-3')"/><button class="scan-btn" onclick="openScanner('ein-s3','Seriennummer 3 scannen')" type="button"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h.01M14 17h3M17 14v7M20 17h.01M20 20h.01"/></svg></button></div>
           <div class="model-preview" id="preview-3"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg><span id="preview-3-text"></span></div>
         </div>
         <div class="form-divider"></div>
         <div class="form-group">
           <div class="form-label">Palettenstellplatz <span class="req">*</span></div>
-          <div class="input-wrap"><input class="form-input" id="ein-platz" placeholder="z.B. 12A - 1"/><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></div>
+          <div class="input-wrap"><input class="form-input" id="ein-platz" placeholder="z.B. 12A - 1"/><button class="scan-btn" onclick="openScanner('ein-platz','Stellplatz scannen')" type="button"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h.01M14 17h3M17 14v7M20 17h.01M20 20h.01"/></svg></button></div>
         </div>
         <div class="form-group">
           <div class="form-label">Eingelagert am <span class="req">*</span></div>
@@ -367,6 +387,7 @@ html, body { height: 100%; overflow: hidden; background: var(--bg0); font-family
         <div style="display:flex;gap:8px;align-items:center">
           <input class="form-input" id="uml-scan-input" placeholder="Seriennummer …" style="flex:1;padding-right:14px" onkeydown="if(event.key==='Enter')addUmlItem()"/>
           <button style="background:var(--bg3);border:0.5px solid var(--bg4);border-radius:10px;padding:12px 14px;color:var(--t1);font-size:13px;font-weight:600;cursor:pointer" onclick="addUmlItem()">Add</button>
+          <button class="scan-btn" style="background:var(--bg3);border:0.5px solid var(--bg4);border-radius:10px;padding:11px 12px;" onclick="openScanner('uml-scan-input','Seriennummer scannen')" type="button"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h.01M14 17h3M17 14v7M20 17h.01M20 20h.01"/></svg></button>
         </div>
         <div class="scan-err" id="uml-scan-err"></div>
       </div>
@@ -376,7 +397,7 @@ html, body { height: 100%; overflow: hidden; background: var(--bg0); font-family
       <div class="form-section" style="padding-top:8px">
         <div class="form-group">
           <div class="form-label">Neuer Stellplatz <span class="req">*</span></div>
-          <div class="input-wrap"><input class="form-input" id="uml-platz" placeholder="z.B. 7C - 2"/><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></div>
+          <div class="input-wrap"><input class="form-input" id="uml-platz" placeholder="z.B. 7C - 2"/><button class="scan-btn" onclick="openScanner('uml-platz','Stellplatz scannen')" type="button"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h.01M14 17h3M17 14v7M20 17h.01M20 20h.01"/></svg></button></div>
         </div>
         <div class="btn-row">
           <button class="action-btn btn-cancel" onclick="clearUml();goBack()">Abbrechen</button>
@@ -436,6 +457,7 @@ html, body { height: 100%; overflow: hidden; background: var(--bg0); font-family
         <div class="hint-box" style="margin:0 0 12px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>Seriennummer eingeben um einen Lagerbestand-Eintrag zu löschen</div>
         <div style="display:flex;gap:8px">
           <input class="form-input" id="admin-delete-serial" placeholder="Seriennummer …" style="flex:1;padding-right:14px"/>
+          <button class="scan-btn" style="background:var(--bg3);border:0.5px solid var(--bg4);border-radius:10px;padding:11px 12px;" onclick="openScanner('admin-delete-serial','Seriennummer scannen')" type="button"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h.01M14 17h3M17 14v7M20 17h.01M20 20h.01"/></svg></button>
           <button style="background:var(--red-bg);border:0.5px solid #4a1a1a;border-radius:10px;padding:12px 14px;color:var(--red);font-size:13px;font-weight:600;cursor:pointer" onclick="doAdminDelete()">Löschen</button>
         </div>
         <div id="admin-delete-err" style="color:var(--red);font-size:12px;margin-top:6px;display:none"></div>
@@ -900,6 +922,115 @@ async function doAdminDelete(){
 // ── INIT ──────────────────────────────────────────────────────────────────────
 document.getElementById('ein-date').value=new Date().toISOString().slice(0,16);
 setInterval(loadLager, 60000);
+
+// ── BARCODE SCANNER ───────────────────────────────────────────────────────────
+let scannerActive = false;
+let scannerTargetInput = null;
+let scannerCallback = null;
+let lastScanTime = 0;
+
+function openScanner(targetInputId, title) {
+  scannerTargetInput = targetInputId;
+  document.getElementById('scanner-title').textContent = title || 'Barcode scannen';
+  document.getElementById('scanner-overlay').classList.add('active');
+  document.getElementById('scanner-result').style.display = 'none';
+  startQuagga();
+}
+
+function closeScanner() {
+  document.getElementById('scanner-overlay').classList.remove('active');
+  stopQuagga();
+}
+
+function startQuagga() {
+  if (scannerActive) return;
+  const container = document.getElementById('scanner-video-container');
+  container.innerHTML = '';
+  Quagga.init({
+    inputStream: {
+      name: 'Live',
+      type: 'LiveStream',
+      target: container,
+      constraints: {
+        width: { min: 640 },
+        height: { min: 480 },
+        facingMode: 'environment'
+      }
+    },
+    decoder: {
+      readers: ['code_128_reader'],
+      debug: { drawBoundingBox: false, showFrequency: false, drawScanline: false, showPattern: false }
+    },
+    locate: true,
+    frequency: 10
+  }, err => {
+    if (err) { console.error('Scanner Fehler:', err); return; }
+    Quagga.start();
+    scannerActive = true;
+  });
+
+  Quagga.onDetected(data => {
+    const now = Date.now();
+    if (now - lastScanTime < 1500) return; // Debounce
+    lastScanTime = now;
+    const code = data.result.codeResult.code;
+    if (!code) return;
+
+    // Vibrate if supported
+    if (navigator.vibrate) navigator.vibrate(100);
+
+    // Show result
+    const resultEl = document.getElementById('scanner-result');
+    resultEl.textContent = '✓ ' + code;
+    resultEl.style.display = 'block';
+
+    // Fill target input
+    if (scannerTargetInput) {
+      const el = document.getElementById(scannerTargetInput);
+      if (el) {
+        el.value = code;
+        el.classList.remove('error');
+        // Trigger lookup if it's a serial number field
+        if (scannerTargetInput.startsWith('ein-s')) {
+          const num = scannerTargetInput.replace('ein-s','');
+          lookupSerial(code, 'preview-' + num);
+        }
+        // Trigger uml add if it's the uml scanner
+        if (scannerTargetInput === 'uml-scan-input') {
+          setTimeout(() => addUmlItem(), 300);
+        }
+      }
+    }
+
+    // Close after short delay
+    setTimeout(() => {
+      closeScanner();
+    }, 800);
+  });
+}
+
+function stopQuagga() {
+  if (!scannerActive) return;
+  try { Quagga.stop(); } catch(e) {}
+  scannerActive = false;
+  const container = document.getElementById('scanner-video-container');
+  if (container) container.innerHTML = '';
+}
+
 </script>
+  <!-- BARCODE SCANNER OVERLAY -->
+  <div class="scanner-overlay" id="scanner-overlay">
+    <div class="scanner-header">
+      <span class="scanner-close" onclick="closeScanner()">✕</span>
+      <span class="scanner-title" id="scanner-title">Barcode scannen</span>
+    </div>
+    <div class="scanner-viewport">
+      <div id="scanner-video-container"></div>
+      <div class="scanner-frame"><div class="scanner-box"></div></div>
+      <div class="scanner-hint">Barcode in den roten Rahmen halten</div>
+      <div class="scanner-result" id="scanner-result"></div>
+    </div>
+  </div>
+
 </body>
 </html>
