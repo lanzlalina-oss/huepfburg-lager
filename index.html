@@ -492,6 +492,20 @@ html, body { height: 100%; overflow: hidden; background: var(--bg0); font-family
 <script>
 const SUPABASE_URL = 'https://yepreioxhmajhkmvaosw.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_SoDUT1Y-bF-ZdzJxiJm2Pg_IXRgEd_6';
+const SHEETS_WEBHOOK = 'https://script.google.com/macros/s/AKfycbzrC-twtSbPiAuypgDwFxjTslsPDGyA9bEZIg4W2V6RekCfgTZ4nCvbm3MUlDFqGGoj_Q/exec';
+
+async function sendToSheets(type, record) {
+  try {
+    await fetch(SHEETS_WEBHOOK, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type, record })
+    });
+  } catch(e) {
+    console.log('Sheets webhook error:', e);
+  }
+}
 const TODAY = new Date().toISOString().split('T')[0];
 
 let allItems = [], soldItems = [], selectedItem = null;
@@ -724,12 +738,17 @@ async function doVerkauf() {
   if(!selectedItem) return;
   setLoading('detail',true);
   try {
-    await sb('POST','verkaufte_huepfburgen',{
+    const verkaufRecord = {
       seriennummer:selectedItem.seriennummer, name:selectedItem.name,
       artikelnummer:selectedItem.artikelnummer, palettenstellplatz:selectedItem.palettenstellplatz,
-      kundenname:cn, foto_urls:[], verkauft_von:getUserName()
-    });
+      kundenname:cn, foto_urls:[], verkauft_von:getUserName(),
+      verkauft_am: new Date().toISOString()
+    };
+    await sb('POST','verkaufte_huepfburgen', verkaufRecord);
     await sb('DELETE','lagerbestand',null,`?id=eq.${selectedItem.id}`);
+    // Google Sheets sync
+    sendToSheets('verkauf', verkaufRecord);
+    sendToSheets('ausbuchen', {seriennummer: selectedItem.seriennummer});
     allItems=allItems.filter(i=>i.id!==selectedItem.id);
     const newSold=await sb('GET','verkaufte_huepfburgen',null,'?order=verkauft_am.desc&limit=1');
     if(newSold?.length) soldItems.unshift(newSold[0]);
@@ -783,6 +802,8 @@ async function doEinbuchen() {
     }
     const inserted=await sb('POST','lagerbestand',rows);
     if(inserted?.length) allItems=[...inserted,...allItems];
+    // Google Sheets sync
+    rows.forEach(r => sendToSheets('einbuchen', r));
     ['ein-s1','ein-s2','ein-s3','ein-platz'].forEach(id=>{const el=document.getElementById(id);if(el){el.value='';el.classList.remove('error');}});
     ['preview-1','preview-2','preview-3'].forEach(id=>document.getElementById(id)?.classList.remove('visible'));
     renderList(allItems,searchTerm); goBack();
@@ -818,7 +839,10 @@ async function doUmlagerung(){
     const newPal=umlSelected.map(i=>i.seriennummer);
     for(const sel of umlSelected){
       await sb('PATCH','lagerbestand',{palettenstellplatz:newPlatz,palette_seriennummern:newPal},`?id=eq.${sel.id}`);
-      await sb('POST','umlagerungsprotokoll',{seriennummer:sel.seriennummer,name:sel.name,alter_stellplatz:sel.palettenstellplatz,neuer_stellplatz:newPlatz,mitarbeiter:getUserName()});
+      const umlRecord = {seriennummer:sel.seriennummer,name:sel.name,alter_stellplatz:sel.palettenstellplatz,neuer_stellplatz:newPlatz,mitarbeiter:getUserName(),umgelagert_am:new Date().toISOString()};
+      await sb('POST','umlagerungsprotokoll', umlRecord);
+      // Google Sheets sync
+      sendToSheets('umlagerung', umlRecord);
       const idx=allItems.findIndex(i=>i.id===sel.id);
       if(idx>-1){allItems[idx].palettenstellplatz=newPlatz;allItems[idx].palette_seriennummern=newPal;}
     }
