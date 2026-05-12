@@ -625,6 +625,7 @@ function showScreen(id, push=true) {
   document.getElementById(id)?.classList.remove('prev');
   if (push && id!==cur) screenStack.push(id);
   if (id==='screen-admin') loadAdminLog();
+  if (id==='screen-fotos') loadFotoTab();
   setTimeout(()=>document.getElementById(cur)?.classList.remove('prev'), 350);
 }
 function goBack() {
@@ -641,7 +642,7 @@ function switchTab(tab) {
   document.querySelectorAll('.screen').forEach(s=>{s.classList.remove('active');s.classList.remove('prev');});
   document.getElementById(map[tab])?.classList.add('active');
   if (tab==='verkauft') renderSold('');
-  if (tab==='fotos') renderFotoList();
+  if (tab==='fotos') loadFotoTab();
 }
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
@@ -660,14 +661,14 @@ function getUserName() { return currentUserProfile?.name || currentUser?.user?.e
 async function loadLager() {
   setLoading('lager', true);
   try {
-    const [items, sold] = await Promise.all([
-      sb('GET','lagerbestand',null,'?order=artikelnummer.asc,seriennummer.asc&limit=2000'),
-      sb('GET','verkaufte_huepfburgen',null,'?order=verkauft_am.desc&limit=500')
-    ]);
-    allItems = items;
-    soldItems = sold;
+    allItems = await sb('GET','lagerbestand',null,'?order=artikelnummer.asc,seriennummer.asc&limit=2000');
     renderList(allItems, searchTerm);
     updateSoldStat();
+    // Load sold WITHOUT foto_urls – die Base64-Fotos machen 27MB!
+    sb('GET','verkaufte_huepfburgen',null,'?select=id,seriennummer,name,artikelnummer,palettenstellplatz,kundenname,verkauft_von,verkauft_am&order=verkauft_am.desc&limit=500').then(sold => {
+      soldItems = sold;
+      updateSoldStat();
+    }).catch(()=>{});
   } catch(e) { showToast('Verbindungsfehler – bitte neu laden','error'); }
   setLoading('lager', false);
 }
@@ -907,6 +908,21 @@ function renderSold(q){
 function filterSold(q){renderSold(q);}
 
 // ── FOTOS ─────────────────────────────────────────────────────────────────────
+async function loadFotoTab() {
+  const todaySold = soldItems.filter(i => (i.verkauft_am||'').startsWith(TODAY));
+  if (todaySold.length > 0 && todaySold[0].foto_urls === undefined) {
+    try {
+      const ids = todaySold.map(i => `"${i.id}"`).join(',');
+      const withFotos = await sb('GET','verkaufte_huepfburgen',null,`?select=id,foto_urls&id=in.(${ids})`);
+      withFotos.forEach(f => {
+        const item = soldItems.find(i => i.id === f.id);
+        if (item) item.foto_urls = f.foto_urls || [];
+      });
+    } catch(e) {}
+  }
+  renderFotoList();
+}
+
 function renderFotoList(){
   const today=soldItems.filter(i=>(i.verkauft_am||'').startsWith(TODAY));
   const missing=today.filter(i=>!(i.foto_urls||[]).length).length;
@@ -1044,7 +1060,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 document.getElementById('ein-date').value=new Date().toISOString().slice(0,16);
-setInterval(loadLager, 300000); // alle 5 Minuten
+setInterval(() => { if(currentUser) loadLager(); }, 300000); // alle 5 Min, nur wenn eingeloggt
 
 // ── SESSION PERSISTENCE ───────────────────────────────────────────────────────
 async function checkSavedSession() {
