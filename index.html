@@ -660,8 +660,12 @@ function getUserName() { return currentUserProfile?.name || currentUser?.user?.e
 async function loadLager() {
   setLoading('lager', true);
   try {
-    allItems = await sb('GET','lagerbestand',null,'?order=erstellt_am.desc&limit=2000');
-    soldItems = await sb('GET','verkaufte_huepfburgen',null,'?order=verkauft_am.desc&limit=500');
+    const [items, sold] = await Promise.all([
+      sb('GET','lagerbestand',null,'?order=artikelnummer.asc,seriennummer.asc&limit=2000'),
+      sb('GET','verkaufte_huepfburgen',null,'?order=verkauft_am.desc&limit=500')
+    ]);
+    allItems = items;
+    soldItems = sold;
     renderList(allItems, searchTerm);
     updateSoldStat();
   } catch(e) { showToast('Verbindungsfehler – bitte neu laden','error'); }
@@ -965,12 +969,15 @@ async function pickPhoto(slotIdx){
 async function loadAdminLog(){
   setLoading('admin',true);
   try {
-    const logs=await sb('GET','umlagerungsprotokoll',null,'?order=umgelagert_am.desc&limit=50');
-    const verkauft=await sb('GET','verkaufte_huepfburgen',null,'?order=verkauft_am.desc&limit=50');
+    // Load both in parallel instead of sequential
+    const [logs, verkauft] = await Promise.all([
+      sb('GET','umlagerungsprotokoll',null,'?order=umgelagert_am.desc&limit=20'),
+      sb('GET','verkaufte_huepfburgen',null,'?order=verkauft_am.desc&limit=20')
+    ]);
     const combined=[
       ...logs.map(l=>({...l,type:'umlagerung',ts:l.umgelagert_am})),
       ...verkauft.map(v=>({...v,type:'verkauf',ts:v.verkauft_am}))
-    ].sort((a,b)=>new Date(b.ts)-new Date(a.ts)).slice(0,60);
+    ].sort((a,b)=>new Date(b.ts)-new Date(a.ts)).slice(0,30);
     let html='';
     combined.forEach(it=>{
       if(it.type==='umlagerung'){
