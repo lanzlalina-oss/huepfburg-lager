@@ -5,7 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="HB Lager">
 <meta name="theme-color" content="#0f0f0f">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23e85d8a'/><text y='.9em' font-size='72' x='50%' text-anchor='middle'>🏰</text></svg>">
+<link rel="manifest" href="data:application/json,{&quot;name&quot;:&quot;Hüpfburg Lager&quot;,&quot;short_name&quot;:&quot;HB Lager&quot;,&quot;start_url&quot;:&quot;/&quot;,&quot;display&quot;:&quot;standalone&quot;,&quot;background_color&quot;:&quot;%230f0f0f&quot;,&quot;theme_color&quot;:&quot;%23e85d8a&quot;}">
 <title>Hüpfburg Lager</title>
 <style>
 :root {
@@ -620,26 +623,38 @@ async function loadLager() {
 
 // ── RENDER LIST ───────────────────────────────────────────────────────────────
 function renderList(items, query) {
+  // Group by artikelnummer, sorted by artikelnummer then name
   const grouped = {};
-  items.forEach(it=>{ const k=(it.name||'?')[0].toUpperCase(); if(!grouped[k]) grouped[k]=[]; grouped[k].push(it); });
+  items.forEach(it => {
+    const k = it.artikelnummer || '???';
+    if (!grouped[k]) grouped[k] = { name: it.name || '???', items: [] };
+    grouped[k].items.push(it);
+  });
+  // Sort by artikelnummer numerically
+  const keys = Object.keys(grouped).sort((a, b) => {
+    const na = parseInt(a), nb = parseInt(b);
+    if (!isNaN(na) && !isNaN(nb)) return na - nb;
+    return a.localeCompare(b);
+  });
   let html = '';
-  const q = (query||'').toLowerCase().trim();
-  Object.keys(grouped).sort().forEach(k=>{
-    html += `<div class="section-hdr">${k}</div>`;
-    grouped[k].forEach(it=>{
-      const oldest=q?getOldest(it.artikelnummer):null;
-      const isOldest=oldest&&it.seriennummer===oldest;
-      const palCount=(it.palette_seriennummern||[]).filter(s=>s!==it.seriennummer).length;
-      html+=`<div class="list-item" onclick="showDetail('${it.id}')">
-        <div class="item-thumb${isOldest?' oldest-border':''}">🏰</div>
+  const q = (query || '').toLowerCase().trim();
+  keys.forEach(k => {
+    const group = grouped[k];
+    html += `<div class="section-hdr">Art. ${k} · ${group.name}</div>`;
+    group.items.forEach(it => {
+      const oldest = q ? getOldest(it.artikelnummer) : null;
+      const isOldest = oldest && it.seriennummer === oldest;
+      const palCount = (it.palette_seriennummern || []).filter(s => s !== it.seriennummer).length;
+      html += `<div class="list-item" onclick="showDetail('${it.id}')">
+        <div class="item-thumb${isOldest ? ' oldest-border' : ''}">🏰</div>
         <div class="item-info">
-          <div class="item-name">${it.name||'–'}</div>
+          <div class="item-name">${it.name || '–'}</div>
           <div class="item-serial">${it.seriennummer}</div>
-          ${isOldest?'<span class="oldest-badge">⚠ Älteste – zuerst versenden</span>':''}
+          ${isOldest ? '<span class="oldest-badge">⚠ Älteste – zuerst versenden</span>' : ''}
         </div>
         <div class="item-right">
-          <span class="platz-badge">${it.palettenstellplatz||'–'}</span>
-          ${palCount>0?`<span class="pal-badge">📦 ×${palCount+1}</span>`:''}
+          <span class="platz-badge">${it.palettenstellplatz || '–'}</span>
+          ${palCount > 0 ? `<span class="pal-badge">📦 ×${palCount + 1}</span>` : ''}
         </div>
       </div>`;
     });
