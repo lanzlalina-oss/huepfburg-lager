@@ -496,11 +496,20 @@ const SHEETS_WEBHOOK = 'https://script.google.com/macros/s/AKfycbw7Q1BgocH3r9hTq
 
 async function sendToSheets(type, record) {
   try {
-    const encoded = encodeURIComponent(JSON.stringify(record));
+    // Send only essential fields to avoid URL length issues
+    const clean = {};
+    const fields = ['seriennummer','name','artikelnummer','palettenstellplatz',
+                    'kundenname','verkauft_von','verkauft_am','eingebucht_von',
+                    'eingelagert_am','alter_stellplatz','neuer_stellplatz','mitarbeiter','umgelagert_am'];
+    fields.forEach(f => { if (record[f] !== undefined) clean[f] = record[f]; });
+    const encoded = encodeURIComponent(JSON.stringify(clean));
     const url = `${SHEETS_WEBHOOK}?type=${type}&data=${encoded}`;
-    console.log('Sending to Sheets:', type, url);
-    const res = await fetch(url, { mode: 'no-cors' });
-    console.log('Sheets response:', res.status, res.type);
+    console.log('Sheets URL length:', url.length, 'type:', type);
+    if (url.length > 8000) {
+      console.log('URL too long, skipping');
+      return;
+    }
+    await fetch(url, { mode: 'no-cors' });
   } catch(e) {
     console.log('Sheets webhook error:', e);
   }
