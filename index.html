@@ -492,16 +492,15 @@ html, body { height: 100%; overflow: hidden; background: var(--bg0); font-family
 <script>
 const SUPABASE_URL = 'https://yepreioxhmajhkmvaosw.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_SoDUT1Y-bF-ZdzJxiJm2Pg_IXRgEd_6';
-const SHEETS_WEBHOOK = 'https://script.google.com/macros/s/AKfycbzrC-twtSbPiAuypgDwFxjTslsPDGyA9bEZIg4W2V6RekCfgTZ4nCvbm3MUlDFqGGoj_Q/exec';
+const SHEETS_WEBHOOK = 'https://script.google.com/macros/s/AKfycbw7Q1BgocH3r9hTqT6pt_CEz9-kfI4H27j9F7lbguTNYZWFE-7fo7GAcj4KaVNc8pLBGA/exec';
 
 async function sendToSheets(type, record) {
   try {
-    await fetch(SHEETS_WEBHOOK, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type, record })
-    });
+    const encoded = encodeURIComponent(JSON.stringify(record));
+    const url = `${SHEETS_WEBHOOK}?type=${type}&data=${encoded}`;
+    console.log('Sending to Sheets:', type, url);
+    const res = await fetch(url, { mode: 'no-cors' });
+    console.log('Sheets response:', res.status, res.type);
   } catch(e) {
     console.log('Sheets webhook error:', e);
   }
