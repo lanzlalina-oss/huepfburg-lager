@@ -7,7 +7,6 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0f0f0f">
 <title>Hüpfburg Lager</title>
-<script src="https://unpkg.com/@zxing/library@latest/umd/index.min.js"></script>
 <style>
 :root {
   --pink: #e85d8a; --green: #3adb7a; --green-bg: #0f2a1a;
@@ -972,67 +971,111 @@ async function finishLogin(data) {
 // Check for saved session on startup
 checkSavedSession();
 
-// ── BARCODE SCANNER (ZXing) ───────────────────────────────────────────────────
-let codeReader = null;
+// ── BARCODE SCANNER (Native BarcodeDetector API) ──────────────────────────────
+let scannerStream = null;
 let scannerTargetInput = null;
+let scannerInterval = null;
 
 function openScanner(targetInputId, title) {
   scannerTargetInput = targetInputId;
   document.getElementById('scanner-title').textContent = title || 'Barcode scannen';
   document.getElementById('scanner-overlay').classList.add('active');
   document.getElementById('scanner-result').style.display = 'none';
-  startZXing();
+  startNativeScanner();
 }
 
 function closeScanner() {
   document.getElementById('scanner-overlay').classList.remove('active');
-  stopZXing();
+  stopNativeScanner();
 }
 
-function startZXing() {
+async function startNativeScanner() {
   try {
-    if (codeReader) { codeReader.reset(); }
-    codeReader = new ZXing.BrowserMultiFormatReader();
     const container = document.getElementById('scanner-video-container');
-    container.innerHTML = '<video id="scanner-video" style="width:100%;height:100%;object-fit:cover"></video>';
-    codeReader.decodeFromVideoDevice(null, 'scanner-video', (result, err) => {
-      if (result) {
-        const code = result.getText();
-        if (!code) return;
-        if (navigator.vibrate) navigator.vibrate(100);
-        const resultEl = document.getElementById('scanner-result');
-        resultEl.textContent = '✓ ' + code;
-        resultEl.style.display = 'block';
-        const el = document.getElementById(scannerTargetInput);
-        if (el) {
-          el.value = code;
-          el.classList.remove('error');
-          if (scannerTargetInput.startsWith('ein-s')) {
-            const num = scannerTargetInput.replace('ein-s','');
-            lookupSerial(code, 'preview-' + num);
-          }
-          if (scannerTargetInput === 'uml-scan-input') {
-            setTimeout(() => addUmlItem(), 400);
-          }
-        }
-        setTimeout(() => closeScanner(), 800);
-      }
+    container.innerHTML = '<video id="scanner-video" autoplay playsinline muted style="width:100%;height:100%;object-fit:cover"></video><canvas id="scanner-canvas" style="display:none"></canvas>';
+    const video = document.getElementById('scanner-video');
+
+    scannerStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
     });
+    video.srcObject = scannerStream;
+    await video.play();
+
+    // Use native BarcodeDetector if available (Chrome Android, Safari 17+)
+    if ('BarcodeDetector' in window) {
+      const detector = new BarcodeDetector({ formats: ['code_128', 'qr_code', 'ean_13', 'ean_8'] });
+      scannerInterval = setInterval(async () => {
+        if (video.readyState === video.HAVE_ENOUGH_DATA) {
+          try {
+            const barcodes = await detector.detect(video);
+            if (barcodes.length > 0) {
+              onBarcodeDetected(barcodes[0].rawValue);
+            }
+          } catch(e) {}
+        }
+      }, 200);
+    } else {
+      // Fallback: show manual input hint
+      const hint = document.querySelector('.scanner-hint');
+      if (hint) hint.textContent = 'Kamera läuft – Barcode vor die Kamera halten oder manuell eingeben';
+      // For devices without BarcodeDetector, just show camera and let user read manually
+      // But try to load ZXing dynamically as fallback
+      loadZXingFallback(video);
+    }
   } catch(e) {
-    console.error('Scanner Fehler:', e);
-    alert('Kamera konnte nicht gestartet werden. Bitte Kamera-Zugriff erlauben.');
+    console.error('Kamera Fehler:', e);
     closeScanner();
+    alert('Kamera konnte nicht gestartet werden.\nBitte Kamera-Zugriff in den Browser-Einstellungen erlauben.');
   }
 }
 
-function stopZXing() {
-  if (codeReader) {
-    try { codeReader.reset(); } catch(e) {}
-    codeReader = null;
+function loadZXingFallback(video) {
+  const script = document.createElement('script');
+  script.src = 'https://cdn.jsdelivr.net/npm/@zxing/browser@latest/umd/index.min.js';
+  script.onload = () => {
+    try {
+      const hints = new Map();
+      const codeReader = new ZXingBrowser.BrowserMultiFormatReader(hints);
+      codeReader.decodeFromVideoElement(video).then(result => {
+        if (result) onBarcodeDetected(result.getText());
+      }).catch(() => {});
+    } catch(e) {}
+  };
+  document.head.appendChild(script);
+}
+
+function onBarcodeDetected(code) {
+  if (!code) return;
+  clearInterval(scannerInterval);
+  if (navigator.vibrate) navigator.vibrate([100]);
+  const resultEl = document.getElementById('scanner-result');
+  if (resultEl) { resultEl.textContent = '✓ ' + code; resultEl.style.display = 'block'; }
+  const el = document.getElementById(scannerTargetInput);
+  if (el) {
+    el.value = code;
+    el.classList.remove('error');
+    if (scannerTargetInput.startsWith('ein-s')) {
+      const num = scannerTargetInput.replace('ein-s', '');
+      lookupSerial(code, 'preview-' + num);
+    }
+    if (scannerTargetInput === 'uml-scan-input') {
+      setTimeout(() => addUmlItem(), 400);
+    }
+  }
+  setTimeout(() => closeScanner(), 700);
+}
+
+function stopNativeScanner() {
+  clearInterval(scannerInterval);
+  scannerInterval = null;
+  if (scannerStream) {
+    scannerStream.getTracks().forEach(t => t.stop());
+    scannerStream = null;
   }
   const container = document.getElementById('scanner-video-container');
   if (container) container.innerHTML = '';
 }
+
 
 </script>
   <!-- BARCODE SCANNER OVERLAY -->
