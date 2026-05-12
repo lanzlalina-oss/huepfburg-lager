@@ -309,23 +309,39 @@ html, body { height: 100%; overflow: hidden; background: var(--bg0); font-family
         <div class="hint-box"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>1–3 Hüpfburgen pro Stellplatz · Modell wird automatisch erkannt</div>
         <div class="form-group">
           <div class="form-label">Seriennummer 1 <span class="req">*</span></div>
-          <div class="input-wrap"><input class="form-input" id="ein-s1" placeholder="z.B. 2025.12.114" oninput="lookupSerial(this.value,'preview-1')"/><button class="scan-btn" onclick="openScanner('ein-s1','Seriennummer 1 scannen')" type="button"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h.01M14 17h3M17 14v7M20 17h.01M20 20h.01"/></svg></button></div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input class="form-input" id="ein-s1" placeholder="z.B. 2025.12.114" oninput="lookupSerial(this.value,'preview-1')" style="flex:1;padding-right:14px"/>
+            <button class="scan-btn" style="background:var(--bg3);border:0.5px solid var(--bg4);border-radius:10px;padding:11px 12px;flex-shrink:0" onclick="openScanner('ein-s1','Seriennummer 1 scannen')" type="button"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h.01M14 17h3M17 14v7M20 17h.01M20 20h.01"/></svg></button>
+          </div>
           <div class="model-preview" id="preview-1"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg><span id="preview-1-text"></span></div>
         </div>
+
         <div class="form-group">
           <div class="form-label">Seriennummer 2 <span style="color:var(--t4);font-size:11px">(optional)</span></div>
-          <div class="input-wrap"><input class="form-input" id="ein-s2" placeholder="z.B. 2025.12.115" oninput="lookupSerial(this.value,'preview-2')"/><button class="scan-btn" onclick="openScanner('ein-s2','Seriennummer 2 scannen')" type="button"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h.01M14 17h3M17 14v7M20 17h.01M20 20h.01"/></svg></button></div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input class="form-input" id="ein-s2" placeholder="z.B. 2025.12.115" oninput="lookupSerial(this.value,'preview-2')" style="flex:1;padding-right:14px"/>
+            <button class="scan-btn" style="background:var(--bg3);border:0.5px solid var(--bg4);border-radius:10px;padding:11px 12px;flex-shrink:0" onclick="openScanner('ein-s2','Seriennummer 2 scannen')" type="button"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h.01M14 17h3M17 14v7M20 17h.01M20 20h.01"/></svg></button>
+          </div>
           <div class="model-preview" id="preview-2"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg><span id="preview-2-text"></span></div>
         </div>
+
         <div class="form-group">
           <div class="form-label">Seriennummer 3 <span style="color:var(--t4);font-size:11px">(optional)</span></div>
-          <div class="input-wrap"><input class="form-input" id="ein-s3" placeholder="z.B. 2025.12.116" oninput="lookupSerial(this.value,'preview-3')"/><button class="scan-btn" onclick="openScanner('ein-s3','Seriennummer 3 scannen')" type="button"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h.01M14 17h3M17 14v7M20 17h.01M20 20h.01"/></svg></button></div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input class="form-input" id="ein-s3" placeholder="z.B. 2025.12.116" oninput="lookupSerial(this.value,'preview-3')" style="flex:1;padding-right:14px"/>
+            <button class="scan-btn" style="background:var(--bg3);border:0.5px solid var(--bg4);border-radius:10px;padding:11px 12px;flex-shrink:0" onclick="openScanner('ein-s3','Seriennummer 3 scannen')" type="button"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h.01M14 17h3M17 14v7M20 17h.01M20 20h.01"/></svg></button>
+          </div>
           <div class="model-preview" id="preview-3"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg><span id="preview-3-text"></span></div>
         </div>
+
         <div class="form-divider"></div>
+
         <div class="form-group">
           <div class="form-label">Palettenstellplatz <span class="req">*</span></div>
-          <div class="input-wrap"><input class="form-input" id="ein-platz" placeholder="z.B. 12A - 1"/><button class="scan-btn" onclick="openScanner('ein-platz','Stellplatz scannen')" type="button"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h.01M14 17h3M17 14v7M20 17h.01M20 20h.01"/></svg></button></div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input class="form-input" id="ein-platz" placeholder="z.B. 12A - 1" style="flex:1;padding-right:14px"/>
+            <button class="scan-btn" style="background:var(--bg3);border:0.5px solid var(--bg4);border-radius:10px;padding:11px 12px;flex-shrink:0" onclick="openScanner('ein-platz','Stellplatz scannen')" type="button"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h.01M14 17h3M17 14v7M20 17h.01M20 20h.01"/></svg></button>
+          </div>
         </div>
         <div class="form-group">
           <div class="form-label">Eingelagert am <span class="req">*</span></div>
