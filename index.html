@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0f0f0f">
 <title>Hüpfburg Lager</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
+<script src="https://unpkg.com/@zxing/library@latest/umd/index.min.js"></script>
 <style>
 :root {
   --pink: #e85d8a; --green: #3adb7a; --green-bg: #0f2a1a;
@@ -525,27 +525,19 @@ async function doLogin() {
   document.getElementById('loading-login').style.display = 'none';
   if (data.error) { errEl.textContent = 'Falsche E-Mail oder Passwort'; return; }
   currentUser = data;
-  // Load profile
-  try {
-    const profiles = await sb('GET', 'user_profiles', null, `?id=eq.${data.user.id}`);
-    currentUserProfile = profiles?.[0] || { name: email.split('@')[0], is_admin: false };
-  } catch(e) {
-    currentUserProfile = { name: email.split('@')[0], is_admin: false };
-  }
-  document.getElementById('login-screen').classList.add('hidden');
-  document.getElementById('user-name-display').textContent = currentUserProfile.name || email.split('@')[0];
-  if (currentUserProfile.is_admin) {
-    document.getElementById('user-pill').classList.add('admin');
-    document.getElementById('admin-link-section').style.display = 'block';
-  }
-  document.getElementById('logout-modal-title').textContent = 'Angemeldet als ' + (currentUserProfile.name || '');
-  document.getElementById('logout-modal-email').textContent = email;
-  loadLager();
+  // Save session for 7 days
+  localStorage.setItem('hb_session', JSON.stringify({
+    access_token: data.access_token,
+    refresh_token: data.refresh_token,
+    expires_at: Date.now() + (7 * 24 * 60 * 60 * 1000)
+  }));
+  await finishLogin(data);
 }
 
 function showLogoutModal() { document.getElementById('logout-modal').style.display = 'flex'; }
 function doLogout() {
   currentUser = null; currentUserProfile = null;
+  localStorage.removeItem('hb_session');
   document.getElementById('logout-modal').style.display = 'none';
   document.getElementById('login-screen').classList.remove('hidden');
   document.getElementById('login-email').value = '';
@@ -923,96 +915,121 @@ async function doAdminDelete(){
 document.getElementById('ein-date').value=new Date().toISOString().slice(0,16);
 setInterval(loadLager, 60000);
 
-// ── BARCODE SCANNER ───────────────────────────────────────────────────────────
-let scannerActive = false;
+// ── SESSION PERSISTENCE ───────────────────────────────────────────────────────
+async function checkSavedSession() {
+  try {
+    const saved = localStorage.getItem('hb_session');
+    if (!saved) return;
+    const session = JSON.parse(saved);
+    // Check if session is still valid (7 days)
+    if (!session.access_token || !session.expires_at) return;
+    if (Date.now() > session.expires_at) {
+      localStorage.removeItem('hb_session');
+      return;
+    }
+    // Try to refresh session
+    const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: session.refresh_token })
+    });
+    const data = await res.json();
+    if (data.access_token) {
+      currentUser = data;
+      localStorage.setItem('hb_session', JSON.stringify({
+        access_token: data.access_token,
+        refresh_token: data.refresh_token,
+        expires_at: Date.now() + (7 * 24 * 60 * 60 * 1000)
+      }));
+      await finishLogin(data);
+    } else {
+      localStorage.removeItem('hb_session');
+    }
+  } catch(e) {
+    localStorage.removeItem('hb_session');
+  }
+}
+
+async function finishLogin(data) {
+  try {
+    const profiles = await sb('GET', 'user_profiles', null, `?id=eq.${data.user.id}`);
+    currentUserProfile = profiles?.[0] || { name: data.user.email.split('@')[0], is_admin: false };
+  } catch(e) {
+    currentUserProfile = { name: data.user.email.split('@')[0], is_admin: false };
+  }
+  document.getElementById('login-screen').classList.add('hidden');
+  const displayName = currentUserProfile.name || data.user.email.split('@')[0];
+  document.getElementById('user-name-display').textContent = displayName;
+  if (currentUserProfile.is_admin) {
+    document.getElementById('user-pill').classList.add('admin');
+    document.getElementById('admin-link-section').style.display = 'block';
+  }
+  document.getElementById('logout-modal-title').textContent = 'Angemeldet als ' + displayName;
+  document.getElementById('logout-modal-email').textContent = data.user.email;
+  loadLager();
+}
+
+// Check for saved session on startup
+checkSavedSession();
+
+// ── BARCODE SCANNER (ZXing) ───────────────────────────────────────────────────
+let codeReader = null;
 let scannerTargetInput = null;
-let scannerCallback = null;
-let lastScanTime = 0;
 
 function openScanner(targetInputId, title) {
   scannerTargetInput = targetInputId;
   document.getElementById('scanner-title').textContent = title || 'Barcode scannen';
   document.getElementById('scanner-overlay').classList.add('active');
   document.getElementById('scanner-result').style.display = 'none';
-  startQuagga();
+  startZXing();
 }
 
 function closeScanner() {
   document.getElementById('scanner-overlay').classList.remove('active');
-  stopQuagga();
+  stopZXing();
 }
 
-function startQuagga() {
-  if (scannerActive) return;
-  const container = document.getElementById('scanner-video-container');
-  container.innerHTML = '';
-  Quagga.init({
-    inputStream: {
-      name: 'Live',
-      type: 'LiveStream',
-      target: container,
-      constraints: {
-        width: { min: 640 },
-        height: { min: 480 },
-        facingMode: 'environment'
-      }
-    },
-    decoder: {
-      readers: ['code_128_reader'],
-      debug: { drawBoundingBox: false, showFrequency: false, drawScanline: false, showPattern: false }
-    },
-    locate: true,
-    frequency: 10
-  }, err => {
-    if (err) { console.error('Scanner Fehler:', err); return; }
-    Quagga.start();
-    scannerActive = true;
-  });
-
-  Quagga.onDetected(data => {
-    const now = Date.now();
-    if (now - lastScanTime < 1500) return; // Debounce
-    lastScanTime = now;
-    const code = data.result.codeResult.code;
-    if (!code) return;
-
-    // Vibrate if supported
-    if (navigator.vibrate) navigator.vibrate(100);
-
-    // Show result
-    const resultEl = document.getElementById('scanner-result');
-    resultEl.textContent = '✓ ' + code;
-    resultEl.style.display = 'block';
-
-    // Fill target input
-    if (scannerTargetInput) {
-      const el = document.getElementById(scannerTargetInput);
-      if (el) {
-        el.value = code;
-        el.classList.remove('error');
-        // Trigger lookup if it's a serial number field
-        if (scannerTargetInput.startsWith('ein-s')) {
-          const num = scannerTargetInput.replace('ein-s','');
-          lookupSerial(code, 'preview-' + num);
+function startZXing() {
+  try {
+    if (codeReader) { codeReader.reset(); }
+    codeReader = new ZXing.BrowserMultiFormatReader();
+    const container = document.getElementById('scanner-video-container');
+    container.innerHTML = '<video id="scanner-video" style="width:100%;height:100%;object-fit:cover"></video>';
+    codeReader.decodeFromVideoDevice(null, 'scanner-video', (result, err) => {
+      if (result) {
+        const code = result.getText();
+        if (!code) return;
+        if (navigator.vibrate) navigator.vibrate(100);
+        const resultEl = document.getElementById('scanner-result');
+        resultEl.textContent = '✓ ' + code;
+        resultEl.style.display = 'block';
+        const el = document.getElementById(scannerTargetInput);
+        if (el) {
+          el.value = code;
+          el.classList.remove('error');
+          if (scannerTargetInput.startsWith('ein-s')) {
+            const num = scannerTargetInput.replace('ein-s','');
+            lookupSerial(code, 'preview-' + num);
+          }
+          if (scannerTargetInput === 'uml-scan-input') {
+            setTimeout(() => addUmlItem(), 400);
+          }
         }
-        // Trigger uml add if it's the uml scanner
-        if (scannerTargetInput === 'uml-scan-input') {
-          setTimeout(() => addUmlItem(), 300);
-        }
+        setTimeout(() => closeScanner(), 800);
       }
-    }
-
-    // Close after short delay
-    setTimeout(() => {
-      closeScanner();
-    }, 800);
-  });
+    });
+  } catch(e) {
+    console.error('Scanner Fehler:', e);
+    alert('Kamera konnte nicht gestartet werden. Bitte Kamera-Zugriff erlauben.');
+    closeScanner();
+  }
 }
 
-function stopQuagga() {
-  if (!scannerActive) return;
-  try { Quagga.stop(); } catch(e) {}
-  scannerActive = false;
+function stopZXing() {
+  if (codeReader) {
+    try { codeReader.reset(); } catch(e) {}
+    codeReader = null;
+  }
   const container = document.getElementById('scanner-video-container');
   if (container) container.innerHTML = '';
 }
