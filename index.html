@@ -553,7 +553,7 @@ function showToast(msg, type = 'success') {
 async function loadLager() {
   setLoading('lager', true);
   try {
-    allItems = await sb('GET', 'lagerbestand', null, '?order=erstellt_am.desc');
+    allItems = await sb('GET', 'lagerbestand', null, '?order=erstellt_am.desc&limit=2000');
     soldItems = await sb('GET', 'verkaufte_huepfburgen', null, '?order=verkauft_am.desc');
     renderList(allItems, searchTerm);
     updateSoldStat();
