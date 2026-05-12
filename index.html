@@ -500,6 +500,20 @@ let screenStack = ['screen-lager'], searchTerm = '';
 let currentUser = null, currentUserProfile = null;
 let modelPhotos = {};
 
+const STORAGE_URL = 'https://yepreioxhmajhkmvaosw.supabase.co/storage/v1/object/public/modellfotos';
+
+function getPhotoUrl(artikelnummer) {
+  if (!artikelnummer || artikelnummer === '???') return null;
+  const padded = artikelnummer.toString().padStart(3, '0');
+  return `${STORAGE_URL}/${padded}.png`;
+}
+
+function imgThumb(artikelnummer) {
+  const url = getPhotoUrl(artikelnummer);
+  if (!url) return '🏰';
+  return `<img src="${url}" style="width:100%;height:100%;object-fit:cover;border-radius:10px" onerror="this.style.display='none';this.parentElement.innerHTML='🏰'"/>`;
+}
+
 // ── TIME ──────────────────────────────────────────────────────────────────────
 function updateTime() {
   const t = new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
@@ -646,7 +660,7 @@ function renderList(items, query) {
       const isOldest = oldest && it.seriennummer === oldest;
       const palCount = (it.palette_seriennummern || []).filter(s => s !== it.seriennummer).length;
       html += `<div class="list-item" onclick="showDetail('${it.id}')">
-        <div class="item-thumb${isOldest ? ' oldest-border' : ''}">🏰</div>
+        <div class="item-thumb${isOldest ? ' oldest-border' : ''}">${imgThumb(it.artikelnummer)}</div>
         <div class="item-info">
           <div class="item-name">${it.name || '–'}</div>
           <div class="item-serial">${it.seriennummer}</div>
@@ -687,6 +701,10 @@ function showDetail(id) {
   document.getElementById('detail-serial').textContent=selectedItem.seriennummer||'–';
   document.getElementById('detail-date').textContent=selectedItem.eingelagert_am?new Date(selectedItem.eingelagert_am).toLocaleString('de-DE'):'–';
   document.getElementById('detail-user').textContent=selectedItem.eingebucht_von||'–';
+  const thumb=document.getElementById('detail-thumb');
+  const photoUrl=getPhotoUrl(selectedItem.artikelnummer);
+  if(photoUrl){thumb.innerHTML=`<img src="${photoUrl}" style="width:100%;height:100%;object-fit:cover" onerror="this.parentElement.innerHTML='🏰'"/>`;}
+  else{thumb.innerHTML='🏰';}
   const mates=(selectedItem.palette_seriennummern||[]).filter(s=>s!==selectedItem.seriennummer);
   const pr=document.getElementById('detail-pal-row');
   if(mates.length){pr.style.display='flex';document.getElementById('detail-pal').textContent=mates.join(', ');}
