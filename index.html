@@ -412,7 +412,10 @@ html, body { height: 100%; overflow: hidden; background: var(--bg0); font-family
       <div class="form-section" style="padding-top:8px">
         <div class="form-group">
           <div class="form-label">Neuer Stellplatz <span class="req">*</span></div>
-          <div class="input-wrap"><input class="form-input" id="uml-platz" placeholder="z.B. 7C - 2"/><button class="scan-btn" onclick="openScanner('uml-platz','Stellplatz scannen')" type="button"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h.01M14 17h3M17 14v7M20 17h.01M20 20h.01"/></svg></button></div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input class="form-input" id="uml-platz" placeholder="z.B. 7C - 2" style="flex:1;padding-right:14px"/>
+            <button class="scan-btn" style="background:var(--bg3);border:0.5px solid var(--bg4);border-radius:10px;padding:11px 12px;flex-shrink:0" onclick="openScanner('uml-platz','Stellplatz scannen')" type="button"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h.01M14 17h3M17 14v7M20 17h.01M20 20h.01"/></svg></button>
+          </div>
         </div>
         <div class="btn-row">
           <button class="action-btn btn-cancel" onclick="clearUml();goBack()">Abbrechen</button>
