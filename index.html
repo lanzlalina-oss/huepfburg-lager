@@ -224,7 +224,14 @@ html, body { height: 100%; overflow: hidden; background: var(--bg0); font-family
 .scan-btn { background: transparent; border: none; cursor: pointer; padding: 4px; display: flex; align-items: center; justify-content: center; color: var(--pink); }
 .scan-btn:active { opacity: 0.7; }
 
-/* LOADING */
+/* COMPACT TOPBAR ON SCROLL */
+.tbar { transition: padding 0.2s ease; }
+.tbar.compact { padding: 6px 16px 7px; }
+.tbar.compact h1 { font-size: 15px; }
+.tbar.compact .app-icon { width: 24px; height: 24px; font-size: 13px; }
+.reload-btn { background: transparent; border: none; color: var(--t3); cursor: pointer; padding: 4px; display: flex; align-items: center; margin-left: auto; border-radius: 8px; transition: color 0.15s; }
+.reload-btn:active { color: var(--pink); }
+.reload-btn.spinning svg { animation: spin 0.7s linear infinite; }
 .loading-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 200; }
 .spinner { width: 36px; height: 36px; border: 3px solid var(--bg4); border-top-color: var(--pink); border-radius: 50%; animation: spin 0.7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -259,7 +266,11 @@ html, body { height: 100%; overflow: hidden; background: var(--bg0); font-family
         <div class="user-pill" id="user-pill" onclick="showLogoutModal()">👤 <span id="user-name-display">–</span></div>
       </div>
     </div>
-    <div class="tbar"><div class="app-icon">🏰</div><h1>Lagerbestand</h1></div>
+    <div class="tbar" id="lager-tbar"><div class="app-icon">🏰</div><h1>Lagerbestand</h1>
+      <button class="reload-btn" id="reload-btn" onclick="doReload()" title="Aktualisieren">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+      </button>
+    </div>
     <div class="search-wrap">
       <div class="search-inner">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
@@ -533,7 +544,7 @@ function getPhotoUrl(artikelnummer) {
 function imgThumb(artikelnummer) {
   const url = getPhotoUrl(artikelnummer);
   if (!url) return '🏰';
-  return `<img src="${url}" style="width:100%;height:100%;object-fit:cover;border-radius:10px" onerror="this.style.display='none';this.parentElement.innerHTML='🏰'"/>`;
+  return `<img src="${url}" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;border-radius:10px" onerror="this.style.display='none';this.parentElement.innerHTML='🏰'"/>`;
 }
 
 // ── TIME ──────────────────────────────────────────────────────────────────────
@@ -659,14 +670,12 @@ async function loadLager() {
 
 // ── RENDER LIST ───────────────────────────────────────────────────────────────
 function renderList(items, query) {
-  // Group by artikelnummer, sorted by artikelnummer then name
   const grouped = {};
   items.forEach(it => {
     const k = it.artikelnummer || '???';
     if (!grouped[k]) grouped[k] = { name: it.name || '???', items: [] };
     grouped[k].items.push(it);
   });
-  // Sort by artikelnummer numerically
   const keys = Object.keys(grouped).sort((a, b) => {
     const na = parseInt(a), nb = parseInt(b);
     if (!isNaN(na) && !isNaN(nb)) return na - nb;
@@ -681,8 +690,11 @@ function renderList(items, query) {
       const oldest = q ? getOldest(it.artikelnummer) : null;
       const isOldest = oldest && it.seriennummer === oldest;
       const palCount = (it.palette_seriennummern || []).filter(s => s !== it.seriennummer).length;
-      html += `<div class="list-item" onclick="showDetail('${it.id}')">
-        <div class="item-thumb${isOldest ? ' oldest-border' : ''}">${imgThumb(it.artikelnummer)}</div>
+      const url = getPhotoUrl(it.artikelnummer);
+      const imgHtml = url
+        ? `<img src="${url}" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;border-radius:10px" onerror="this.style.display='none';this.parentElement.innerHTML='🏰'"/>`
+        : '🏰';      html += `<div class="list-item" onclick="showDetail('${it.id}')">
+        <div class="item-thumb${isOldest ? ' oldest-border' : ''}">${imgHtml}</div>
         <div class="item-info">
           <div class="item-name">${it.name || '–'}</div>
           <div class="item-serial">${it.seriennummer}</div>
@@ -725,7 +737,7 @@ function showDetail(id) {
   document.getElementById('detail-user').textContent=selectedItem.eingebucht_von||'–';
   const thumb=document.getElementById('detail-thumb');
   const photoUrl=getPhotoUrl(selectedItem.artikelnummer);
-  if(photoUrl){thumb.innerHTML=`<img src="${photoUrl}" style="width:100%;height:100%;object-fit:cover" onerror="this.parentElement.innerHTML='🏰'"/>`;}
+  if(photoUrl){thumb.innerHTML=`<img src="${photoUrl}" loading="lazy" style="width:100%;height:100%;object-fit:cover" onerror="this.parentElement.innerHTML='🏰'"/>`;}
   else{thumb.innerHTML='🏰';}
   const mates=(selectedItem.palette_seriennummern||[]).filter(s=>s!==selectedItem.seriennummer);
   const pr=document.getElementById('detail-pal-row');
@@ -1001,9 +1013,31 @@ async function doAdminDelete(){
   setLoading('admin',false);
 }
 
-// ── INIT ──────────────────────────────────────────────────────────────────────
+// ── RELOAD & SCROLL COMPACT ───────────────────────────────────────────────────
+async function doReload() {
+  const btn = document.getElementById('reload-btn');
+  if (btn) btn.classList.add('spinning');
+  await loadLager();
+  if (btn) btn.classList.remove('spinning');
+}
+
+// Compact topbar on scroll
+document.addEventListener('DOMContentLoaded', () => {
+  const list = document.getElementById('lager-list');
+  const tbar = document.getElementById('lager-tbar');
+  const sbar2 = document.querySelector('#screen-lager .search-wrap');
+  if (list && tbar) {
+    list.addEventListener('scroll', () => {
+      if (list.scrollTop > 30) {
+        tbar.classList.add('compact');
+      } else {
+        tbar.classList.remove('compact');
+      }
+    });
+  }
+});
 document.getElementById('ein-date').value=new Date().toISOString().slice(0,16);
-setInterval(loadLager, 60000);
+setInterval(loadLager, 300000); // alle 5 Minuten
 
 // ── SESSION PERSISTENCE ───────────────────────────────────────────────────────
 async function checkSavedSession() {
