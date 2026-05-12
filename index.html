@@ -745,8 +745,14 @@ async function doVerkauf() {
     };
     await sb('POST','verkaufte_huepfburgen', verkaufRecord);
     await sb('DELETE','lagerbestand',null,`?id=eq.${selectedItem.id}`);
-    // Google Sheets sync
-    sendToSheets('verkauf', verkaufRecord);
+    // Google Sheets sync – ohne foto_urls
+    const sheetsRecord = {
+      seriennummer:selectedItem.seriennummer, name:selectedItem.name,
+      artikelnummer:selectedItem.artikelnummer, palettenstellplatz:selectedItem.palettenstellplatz,
+      kundenname:cn, verkauft_von:getUserName(),
+      verkauft_am: new Date().toISOString()
+    };
+    sendToSheets('verkauf', sheetsRecord);
     sendToSheets('ausbuchen', {seriennummer: selectedItem.seriennummer});
     allItems=allItems.filter(i=>i.id!==selectedItem.id);
     const newSold=await sb('GET','verkaufte_huepfburgen',null,'?order=verkauft_am.desc&limit=1');
