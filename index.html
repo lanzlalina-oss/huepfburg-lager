@@ -492,7 +492,7 @@ html, body { height: 100%; overflow: hidden; background: var(--bg0); font-family
 <script>
 const SUPABASE_URL = 'https://yepreioxhmajhkmvaosw.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_SoDUT1Y-bF-ZdzJxiJm2Pg_IXRgEd_6';
-const SHEETS_WEBHOOK = 'https://script.google.com/macros/s/AKfycbw7Q1BgocH3r9hTqT6pt_CEz9-kfI4H27j9F7lbguTNYZWFE-7fo7GAcj4KaVNc8pLBGA/exec';
+const SHEETS_WEBHOOK = 'https://script.google.com/macros/s/AKfycbwfPDLLdP1r8WPjnnIz0IZk4cRJZ0GrshAHSspKKesGSYIprrRM-GkgKY4cAKpvIAokUQ/exec';
 
 async function sendToSheets(type, record) {
   try {
@@ -857,6 +857,7 @@ async function doUmlagerung(){
       await sb('POST','umlagerungsprotokoll', umlRecord);
       // Google Sheets sync
       sendToSheets('umlagerung', umlRecord);
+      sendToSheets('umlagerung_update', {seriennummer:sel.seriennummer, neuer_stellplatz:newPlatz});
       const idx=allItems.findIndex(i=>i.id===sel.id);
       if(idx>-1){allItems[idx].palettenstellplatz=newPlatz;allItems[idx].palette_seriennummern=newPal;}
     }
