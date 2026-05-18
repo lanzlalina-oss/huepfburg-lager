@@ -777,8 +777,13 @@ async function doVerkauf() {
     const newSold=await sb('GET','verkaufte_huepfburgen',null,'?order=verkauft_am.desc&limit=1');
     if(newSold?.length) soldItems.unshift(newSold[0]);
     document.getElementById('sell-modal').style.display='none';
-    renderList(allItems,searchTerm); updateSoldStat();
-    goBack(); showToast('✓ Hüpfburg wurde ausgebucht');
+    // Reset navigation stack completely back to lager
+    document.querySelectorAll('.screen').forEach(s=>{s.classList.remove('active');s.classList.remove('prev');});
+    document.getElementById('screen-lager').classList.add('active');
+    screenStack = ['screen-lager'];
+    showToast('✓ Hüpfburg wurde ausgebucht');
+    // Reload fresh data from Supabase
+    await loadLager();
   } catch(e){showToast('Fehler beim Speichern','error');}
   setLoading('detail',false);
 }
@@ -830,8 +835,11 @@ async function doEinbuchen() {
     rows.forEach(r => sendToSheets('einbuchen', r));
     ['ein-s1','ein-s2','ein-s3','ein-platz'].forEach(id=>{const el=document.getElementById(id);if(el){el.value='';el.classList.remove('error');}});
     ['preview-1','preview-2','preview-3'].forEach(id=>document.getElementById(id)?.classList.remove('visible'));
-    renderList(allItems,searchTerm); goBack();
+    document.querySelectorAll('.screen').forEach(s=>{s.classList.remove('active');s.classList.remove('prev');});
+    document.getElementById('screen-lager').classList.add('active');
+    screenStack = ['screen-lager'];
     showToast(`✓ ${serials.length} Hüpfburg(en) eingebucht auf ${platz}`);
+    await loadLager();
   } catch(e){showToast('Fehler: '+e.message,'error');}
   setLoading('einbuchen',false);
 }
@@ -872,7 +880,11 @@ async function doUmlagerung(){
       if(idx>-1){allItems[idx].palettenstellplatz=newPlatz;allItems[idx].palette_seriennummern=newPal;}
     }
     const cnt=umlSelected.length;clearUml();document.getElementById('uml-platz').value='';
-    renderList(allItems,searchTerm);goBack();showToast(`✓ ${cnt} Hüpfburg(en) auf ${newPlatz} umgelagert`);
+    document.querySelectorAll('.screen').forEach(s=>{s.classList.remove('active');s.classList.remove('prev');});
+    document.getElementById('screen-lager').classList.add('active');
+    screenStack = ['screen-lager'];
+    showToast(`✓ ${cnt} Hüpfburg(en) auf ${newPlatz} umgelagert`);
+    await loadLager();
   } catch(e){showToast('Fehler beim Umlagern','error');}
   setLoading('umlager',false);
 }
