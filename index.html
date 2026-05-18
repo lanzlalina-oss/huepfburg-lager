@@ -273,9 +273,14 @@ html, body { height: 100%; overflow: hidden; background: var(--bg0); font-family
       </button>
     </div>
     <div class="search-wrap">
-      <div class="search-inner">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-        <input class="search-input" id="search-input" placeholder="Name, Seriennr., Artikelnr. …" oninput="doSearch(this.value)"/>
+      <div class="sw" style="display:flex;gap:8px;align-items:center">
+        <div class="search-inner" style="flex:1">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input class="search-input" id="search-input" placeholder="Name, Seriennr., Artikelnr. …" oninput="doSearch(this.value)"/>
+        </div>
+        <button class="scan-btn" style="background:var(--bg3);border:0.5px solid var(--bg4);border-radius:10px;padding:9px 12px;flex-shrink:0" onclick="openScanner('search-scan','Seriennummer scannen')" type="button">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h.01M14 17h3M17 14v7M20 17h.01M20 20h.01"/></svg>
+        </button>
       </div>
     </div>
     <div class="stats-row">
@@ -294,6 +299,7 @@ html, body { height: 100%; overflow: hidden; background: var(--bg0); font-family
       </button>
     </div>
     <div class="toast" id="toast-lager"></div>
+    <input id="search-scan" style="display:none"/>
     <div class="loading-overlay" id="loading-lager" style="display:none"><div class="spinner"></div></div>
     <!-- LOGOUT MODAL -->
     <div class="modal-overlay" id="logout-modal" style="display:none">
@@ -1115,7 +1121,11 @@ function onBarcodeDetected(code) {
   if (el) {
     el.value = code;
     el.classList.remove('error');
-    if (scannerTargetInput.startsWith('ein-s')) {
+    if (scannerTargetInput === 'search-scan') {
+      // Trigger search directly
+      document.getElementById('search-input').value = code;
+      doSearch(code);
+    } else if (scannerTargetInput.startsWith('ein-s')) {
       const num = scannerTargetInput.replace('ein-s', '');
       lookupSerial(code, 'preview-' + num);
     }
